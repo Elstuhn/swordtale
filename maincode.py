@@ -20,7 +20,8 @@ class Player():
         self.user = username
         self.race = race
         self.guild = None
-        self.stats = {'dmg': 10, '
+        self.stats = {'hp' : 25, 'atk': 10, 'defense' : 5, 'phys_atk': 0, 'phys_def':0, 'mag_atk':0, 'mag_def' : 0}
+        
 
 
 @client.event
