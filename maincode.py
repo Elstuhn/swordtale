@@ -15,12 +15,18 @@ discord.Client(activity = discord.Game(name = ",help"))
 ##client = discord.Client(activity = discord.Game(name=",help"))
 client = commands.Bot(command_prefix = ",")
 
+class Guild():
+	def __init__(self, name, owner):
+		self.name = name
+		self.owner = owner
+
 class Player():
     def __init__(self, username, race):
         self.user = username
         self.race = race
         self.guild = None
         self.stats = {'hp' : 25, 'agility' : 0, 'atk': 10, 'defense' : 5, 'phys_atk': 0, 'phys_def':0, 'mag_atk':0, 'mag_def' : 0}
+		self.class = None
         
 
 
