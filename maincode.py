@@ -215,6 +215,7 @@ class Storage():
             sleep(1.7)
 
 
+
 fm = FileMonster()
 data = fm.load("data")
 banned = data.chooseobj("banned")
@@ -222,8 +223,11 @@ races = data.chooseobj("races")
 admin = data.chooseobj("admins")
 players = data.chooseobj("players")
 playerlist = list(players)
+map_ = data.chooseobj("map")
+places = data.chooseobj("places")
 skills = data.chooseobj("skills")
 levels = data.chooseobj("levels")
+guilds = data.chooseobj("guilds")
 
 #setup begin
 with open('token', 'rb') as readfile:
@@ -234,15 +238,30 @@ intents = discord.Intents.all()
 ##client = discord.Client(activity = discord.Game(name=",help"))
 client = commands.Bot(command_prefix = ",", activity = discord.Game(name=",help"), intents=intents, help_command = None)
 
+
+
+class Role():
+    def __init__(self, name, position, kickPerms = False, invitePerms = False, promotePerms = False, demotePerms = False, rolecreationPerms = False, editPerms = False):
+        self.name = name
+        self.kickPerms = kickPerms
+        self.invitePerms = invitePerms
+        self.promotePerms = promotePerms
+        self.demotePerms = demotePerms
+        self.rolecreationPerms = rolecreationPerms
+        self.editPerms = editPerms
+        self.pos = position
+
+guildmaster = Role('Guild Master', 0, kickPerms = True, invitePerms = True, promotePerms = True, demotePerms = True, rolecreationPerms = True, editPerms = True)
+member = Role('Member', 6)
+
 class Guild():
     def __init__(self, name, owner):
         self.name = name
         self.owner = owner
         self.value = data.chooseobj('players')[f'{owner}'].gold #set initial guild value to owner's gold amount
-        self.members = []
-
-    async def promote(ctx, member : discord.Member):
-        
+        self.members = {}
+        self.roles = {'Guild Master' : guildmaster, 'Member' : member}
+        self.rolepos = ['Guild Master', 0, 0, 0, 0, 0, 'Member']
         
 
 async def checkstart(ctx, game = False, private = False):
@@ -280,6 +299,8 @@ class Player():
         self.stats = {'hp' : 20, 'agility' : 0, 'atk': 5, 'defense' : 2, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0}
         self.class_ = None
         self.skills = {"punch" : [0, 0, 'Beginner', 'e']} #index 0: times used, index 1: level, index 2: level name, index 3: keybind
+        self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
+            
 
 
 @client.event
@@ -300,14 +321,6 @@ prefix = ","
 
 async def timer():
     await client.wait_until_ready()
-
-async def calcstats(playerinst):
-    pass
-    
-
-@client.event
-async def on_guild_join(guild):
-    print(f"{client.user} has joined a new group!\nGroup Name: {guild.name}")
 
 
 @client.command(aliases = ["inv"])
@@ -371,11 +384,14 @@ async def gamehelp(ctx):
     check = await checkstart(ctx)
     if not check:
         return
-    embed = discord.Embed(title = "Game Commands", colour = discord.Colour(1520))
+    embed = discord.Embed(title = "Game Commands", colour = discord.Color.blue())
+    embed.add_field(name = ",ghelp", value = "shows this lol")
     embed.add_field(name = ",start", value = "starts your adventure", inline= False)
     embed.add_field(name = ",player", value = "shows your player info", inline= False)
     embed.add_field(name = ",stats", value = "shows your stats", inline = False)
-    embed.add_field(name = ",create_guild (guild name)", value = "creates a guild (needs 4k gold)", inline = False)
+    embed.add_field(name = ",guildhelp", value = "shows all the commands in relation to guilds", inline = False)
+    embed.add_field(name = ",move (direction)", value = "moves you in the map. directions - up, right, left, down", inline =False)
+    embed.add_field(name = ",map", value = "displays the map", inline = False)
     await ctx.send(embed = embed)
 
 @client.command()
@@ -385,7 +401,6 @@ async def start(ctx):
         return
     def checknum(message):
         return message.author == ctx.author
-
     if str(ctx.author.id) in players:
         await ctx.send("You already have a save! Are you sure you want to create a new save? [y/n]")
         try:
@@ -430,7 +445,7 @@ async def start(ctx):
     await ctx.send(embed = embed)
         
     try:
-        number = await client.wait_for("message", check=checknum, timeout = 20)
+        number = await client.wait_for("message", check=checknum, timeout = 30)
         number = number.content
         if number not in ['1', '2', '3', '4', '5']:
             await ctx.send("Invalid number! Enter the number beside the races next time!")
@@ -455,6 +470,9 @@ async def start(ctx):
             return
         elif len(playername) < 3:
             await ctx.send("Length of name has to be more than 2.")
+            return
+        elif playername in players:
+            await ctx.send("Name taken!")
             return
         
     except asyncio.TimeoutError as e:
@@ -481,11 +499,19 @@ async def player(ctx):
     check = await checkstart(ctx, game = True)
     if not check:
         return
+    if str(ctx.author.id) in admin:
+        status = "admin"
+    else:
+        status = "player"
     playerstat = players[str(ctx.author.id)] #gets player instance of sender
-    embed = discord.Embed(title = f"**__{playerstat.user}'s Info__**")
+    embed = discord.Embed(title = f"**__{playerstat.user}'s Info__**          **__Status: {status}__**")
     embed.add_field(name = "Gold :coin:", value = f"{playerstat.gold}")
     embed.add_field(name = "Race :flag_white:", value = f"{playerstat.race}", inline = True)
     embed.add_field(name = "Level :arrow_up:", value = f"{playerstat.level} [{playerstat.exp}/{levels[playerstat.level]}]", inline = True)
+    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+    embed.add_field(name = "Co-ords :compass:", value = f"{playerstat.location[0]}")
+    embed.add_field(name = "Location :map:", value = f"{playerstat.location[1]}")
+    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
     embed.add_field(name = "Guild :beginner:", value = f"{playerstat.guild}", inline = True)
     embed.add_field(name = "Guild Position :military_helmet:", value = f"{playerstat.guildpos}", inline=True)
     embed.add_field(name = "\u200b", value = "\u200b", inline=False)
@@ -540,6 +566,9 @@ async def stats(ctx):
     embed.add_field(name = "Magic Defense", value = f"{playerstats['mag_def']}")
     await ctx.send(embed=embed)
 
+
+#guild commands
+
 @client.command(aliases = ["gcreate"])
 async def create_guild(ctx, *, guildname):
     check = await checkstart(ctx, game = True)
@@ -552,16 +581,21 @@ async def create_guild(ctx, *, guildname):
     elif len(guildname.split()) > 3 or len(guildname) > 21:
         await ctx.send("Guild name too long!")
         return
+    elif guildname in guilds:
+        await ctx.send("The guild name already exists!")
+        return
     elif playerins.gold < 4000:
         await ctx.send("Not enough gold!")
         return
     
     playerins.gold -= 4000
     guildins = Guild(guildname, f'{ctx.author.id}')
-    playerins.guildpos = "Leader"
+    playerins.guildpos = "Guild Master"
     playerins.guild = guildname
     playerins.guildins = guildins
     await ctx.send(f"Guild '{guildname}' has been created by {ctx.author.name}!")
+    guilds[f'{guildname}'] = guildins
+    guildins.members[f'{ctx.author.id}'] = f'{playerins.user}'
 
 @client.command(aliases = ["gpromote"])
 async def guildpromote(ctx, member : discord.Member):
@@ -569,20 +603,70 @@ async def guildpromote(ctx, member : discord.Member):
     if not check:
         return
     playerins = players[f"{ctx.author.id}"]
-    playerins2 = players[f"{member.id}"]
-    if playerins.guildpos != "Leader":
-        await ctx.send("You must be the Leader of the guild to do this!")
+    try:
+        playerins2 = players[f"{member.id}"]
+    except:
+        await ctx.send("Player hasn't started his/her adventure yet! Start your adventure with `,start`!")
         return
-    elif playerins2.guild != playerins.guild:
+    guild = playerins.guildins
+    if playerins2.guild != playerins.guild:
         await ctx.send("Player must be part of your guild!")
         return
-    elif playerins2.guildpos not in ["Member", "Officer"]
+    
+    elif guild.roles[f'{playerins.guildpos}'].promotePerms:
+        await ctx.send("You don't have the permissions to do this!")
+        return
+    role1 = guild.rolepos.index(playerins.guildpos)
+    role2 = guild.rolepos.index(playerins2.guildpos)
+    if role2 <= role1:
+        await ctx.send("User's role is higher or equal to yours.")
+        return
+    elif role2-1 == role1:
+        await ctx.send("You do not have permissions to do this!")
+        return
+
+    newrole = guild.rolepos[role2-1]
+    playerins2.guildpos = newrole
+    await ctx.send(f"{playerins2.user} has been promoted from {role2} to {newrole}!")
+
+@client.command()
+async def guildhelp(ctx):
+    embed = discord.Embed(title = "Guild Help", colour = discord.Color.green())
+    embed.add_field(name = ",guildhelp", value = "shows this lol", inline=False)
+    embed.add_field(name = ",create_guild (guild name)", value = "creates a guild (requires 4k gold)")
+    embed.add_field(name= ",guild", value = "shows your guild info", inline=False)
+    embed.add_field(name = ",ginvite @user", value = "invites someone to your guild")
+    embed.add_field(name = ",gleave", value = "leaves the guild you are in")
+    embed.add_field(name=",gdisband", value = "disbands the guild(must be guild master)")
+    embed.add_field(name = ",gpromote @user", value = "promotes one of your guild member to a higher rank", inline=False)
+    await ctx.send(embed=embed)
 
 @client.command(aliases = ["guildinfo"])
 async def guild(ctx):
     check = await checkstart(ctx, game = True)
     if not check:
         return
+    playerins = players[f'{ctx.author.id}']
+    if playerins.guild == None:
+        await ctx.send("You're not in a guild!")
+        return
+    guild = playerins.guildins
+    embed = discord.Embed(title = f"**__{playerins.guild}__**")
+    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+    owner = players[guild.owner].user
+    embed.add_field(name = "Guild Master :crown:", value = f"{owner}")
+    embed.add_field(name = "Value :moneybag:", value = f"{guild.value}")
+    _ = 0
+    for i in guild.members:
+        _ += 1
+    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+    embed.add_field(name = "Member Count :page_with_curl:   ", value = f"{_}")
+    _ = []
+    for i in guild.roles:
+        _.append(i)
+    _ = '\n'.join(_)
+    embed.add_field(name = "Roles :military_helmet:", value = f"{_}", inline=True)
+    await ctx.send(embed = embed)
 
 @client.command()
 async def ginvite(ctx, member : discord.Member):
@@ -590,10 +674,241 @@ async def ginvite(ctx, member : discord.Member):
     if not check:
         return
     playerins = players[f'{ctx.author.id}']
+    try:
+        playerins2 = players[f'{member.id}']
+    except:
+        await ctx.send("User has not started his/her adventure yet! Start it with `,start`")
+        return
     guild = playerins.guildins
-    if guild.owner != ctx.
+    if guild == None:
+        await ctx.send(f"You are not in a guild {ctx.author.mention}!")
+        return
+    elif not guild.roles[f'{playerins.guildpos}'].invitePerms:
+        await ctx.send("You do not have permissions to do this!")
+        return
+
+    elif playerins2.guild != None:
+        await ctx.send("User is already in a guild!")
+        return
+    def checknum(message):
+        return message.author == member  
+    await ctx.send(f"{member.mention} you have been invited to join {playerins.guild}. Would you like to join? [y/n]")
+    try:
+        _ = await client.wait_for("message", check=checknum, timeout = 15)
+        _ = _.content
+        if _ != "y":
+            await ctx.send("Invitation denied.")
+            return
+        
+    except asyncio.TimeoutError as e:
+        await ctx.send("You took too long!")
+        return
+
+    playerins2.guild = playerins.guild
+    playerins2.guildins = guild
+    playerins2.guildpos = "Member"
+    guild.members[f'{member.id}'] = f'{playerins2.user}'
+    guild.value += playerins2.gold
+    await ctx.send(f"You have joined {playerins.guild}!")
     
+@client.command()
+async def gleave(ctx):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    if playerins.guild == None:
+        await ctx.send("You are not in a guild!")
+        return
+    elif playerins.guildpos == "Guild Master":
+        await ctx.send("You are the guild master, you cannot leave this guild! You can disband the guild using `,gdisband`")
+        return
+    def check(message):
+        return message.author == ctx.author
+    guildname = playerins.guild
+    await ctx.send(f"Are you sure you want to leave {guildname}? [y/n]")
+    try:
+        _ = await client.wait_for("message", check = check, timeout = 15)
+        _ = _.content
+
+    except asyncio.TimeoutError as e:
+        await ctx.send("You took too long!")
+        return
+    if _ != "y":
+        await ctx.send("Cancelled.")
+        return
+    playerins.guild = None
+    playerins.guildins.value -= playerins.gold
+    del playerins.guildins.members[f'{ctx.author.id}']
+    playerins.guildins = None
+    playerins.guildpos = None
+    await ctx.send(f"You have left {guildname}")
     
+@client.command()
+async def gdisband(ctx):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    if playerins.guild == None:
+        await ctx.send("You are not in a guild!")
+        return
+    elif playerins.guildpos != "Guild Master":
+        await ctx.send("You do not have the permissions to do this!")
+        return
+    
+    def check(message):
+        return message.author == ctx.author
+    await ctx.send("Are you sure you want to disband the guild? [y/n]")
+    try:
+        _ = await client.wait_for("message", check = check, timeout = 15)
+        _ = _.content
+        if _ != "y":
+            await ctx.send("Cancelled.")
+            return
+
+    except asyncio.TimeoutError as e:
+        await ctx.send("You took too long!")
+        return
+    
+    guild = playerins.guildins
+    for i in guild.members:
+        playerins = players[i]
+        playerins.guild = None
+        playerins.guildpos = None
+        playerins.guildins = None
+        del guilds[guild.name]
+        
+    await ctx.send("Guild has been disbanded!")
+
+@client.command()
+async def gcreaterole(ctx, *, name):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    guildins = playerins.guildins
+    if playerins.guild == None:
+        await ctx.send("You are not in a guild!")
+        return
+    elif not guildins.roles[f'{playerins.guildpos}'].rolecreationPerms:
+        await ctx.send("You do not have enough permissions!")
+        return
+
+    elif not 0 in guildins.rolepos:
+        await ctx.send("The guild has reached the maximum limit of having 5 custom roles!")
+        return
+
+    elif len(name.split()) > 3 or len(name) > 15:
+        await ctx.send("Role name is too long!")
+        return
+
+    elif not name.isalnum():
+        await ctx.send("Role name must be alphanumeric!")
+        return
+    
+    rolepos = guildins.rolepos
+    position = rolepos.index(f'{playerins.guildpos}')
+    if not 0 in rolepos[position:]:
+        await ctx.send("Cannot create a role that is higher ranked than yours!")
+        return
+    pos = []
+    count = 0
+    for i in rolepos[position+1:]:
+        count+=1
+        if i == 0:
+            pos.append(position+count)
+    await ctx.send(f"The available positions for the role are `{' '.join(pos)}` the lower number the higher the rank")
+    await ctx.send(f"What position would you like {name} to be in")
+    def check(message):
+        return message.author == ctx.author
+    try:
+        _ = await client.wait_for("message", check = check, timeout = 15)
+        _ = _.content
+        if not _.isdigit():
+            await ctx.send("Invalid input")
+            return
+        elif int(_) not in pos:
+            await ctx.send("Please enter a valid position next time!")
+            return
+
+    except asyncio.TimeoutError as e:
+        await ctx.send("You took too long!")
+        return
+        
+    roleins = Role(name, int(_))
+    guildins.roles[f'{name}'] = roleins
+    guildins.rolepos[_] = name
+
+@client.command()
+async def geditrole(ctx, rolename):
+    
+        
+#game commands
+async def createmob():
+    pass
+
+
+@client.command()
+async def move(ctx, direction):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    if direction not in ["right", "left", "up", "down"]:
+        await ctx.send("Invalid direction! Valid directions: `right, left, up, down`")
+        return
+    
+    playerins = players[f'{ctx.author.id}']
+    coords = playerins.location[0]
+    if direction == "up":
+        if int(coords[0]) - 1 == -1:
+            await ctx.send("A mysterious barrier blocks your path...")
+            return
+        _ = int(coords[0])-1
+        playerins.location[0] = f"{_}-{coords[2]}"
+
+    elif direction == "down":
+        if int(coords[0])+1 == 10:
+            await ctx.send("A mysterious barrier blocks your path...")
+            return
+        _ = int(coords[0])+1
+        playerins.location[0] = f"{_}-{coords[2]}"
+
+    elif direction == "right":
+        if int(coords[2])+1 == 10:
+            await ctx.send("A mysterious barrier blocks your path...")
+            return
+        _ = int(coords[2])+1
+        playerins.location[0] = f"{coords[0]}-{_}"
+
+    else:
+        if int(coords[2])-1 == -1:
+            await ctx.send("A mysterious barrier blocks your path...")
+            return
+        _ = int(coords[2])-1
+        playerins.location[0] = f"{coords[0]}-{_}"
+
+    try:
+        playerins.location[1] = places[playerins.location[0]]
+
+    except:
+        playerins.location[1] = "Wilderness - Where monsters roam"
+    await ctx.send(f"You moved {direction}")
+            
+@client.command()
+async def map(ctx):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    embed = discord.Embed(title = "Map :compass:", colour = discord.Colour.orange())
+    embed.add_field(name="\u200b", value = "\u200b", inline=False)
+    for i in map_:
+        embed.add_field(name = "\u200b", value = f'{"".join(i)}', inline=False)
+    await ctx.send(embed=embed)
+
+
+
+#admin commands
 @client.command()
 async def admingold(ctx, member : discord.Member, gold : int):
     if str(ctx.author.id) not in admin:
