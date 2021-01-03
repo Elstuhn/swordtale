@@ -11,210 +11,64 @@ from datetime import datetime
 from collections import defaultdict
 
 fileopened = {}
+class Player():
+    def __init__(self, username, race):
+        self.user = username
+        self.race = race
+        self.inventory = {}
+        self.gear = {"weapon" : None, "secondary" : None, "helmet" : None, "chest" : None, "legs" : None, "boots" : None, "ring" : None, "amulet" : None, "special" : None}
+        self.gold = 0
+        self.level = 0
+        self.exp = 0
+        self.guild = None
+        self.guildpos = None
+        self.guildins = None
+        self.party = None    #party instance
+        self.statsp = {'hp' : 0, 'agility' : 0, 'looting' : 0,  'atk': 0, 'defense' : 0, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0, 'cooldown_speed' : 0}
+        self.stats = {'hp' : 20, 'agility' : 0, 'atk': 5, 'defense' : 2, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0}
+        self.class_ = None
+        self.skills = {"e" : [0, 0, 'Beginner', 'punch'], "q" : None, "w": None, "a" : None, "s" : None, "d" : None} #index 0: times used, index 1: level, index 2: level name, index 3: attack name
+        self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
 
+class Party():
+    def __init__(self, owner):
+        self.owner = owner
+        self.members = [owner]
 
-class FileMonster(defaultdict):
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(list, *args, **kwargs)
+class Role():
+    def __init__(self, name, position, kickPerms = False, invitePerms = False, setrolePerms = False, rolecreationPerms = False, editPerms = False):
+        self.name = name
+        self.kickPerms = kickPerms
+        self.invitePerms = invitePerms
+        self.setrolePerms = setrolePerms
+        self.rolecreationPerms = rolecreationPerms
+        self.editPerms = editPerms
+        self.pos = position
+
+class Guild():
+    def __init__(self, name, owner):
+        self.name = name
+        self.owner = owner
+        self.value = data.chooseobj('players')[f'{owner}'].gold #set initial guild value to owner's gold amount
+        self.members = {} #memberid : membername
+        self.roles = {'Guild Master' : guildmaster, 'Member' : member}
+        self.rolepos = ['Guild Master', 0, 0, 0, 0, 0, 'Member']
+
+class Mob():
+    def __init__(self, name, level, atk, hp, defense, phys_atk, phys_def, mag_atk, mag_def, cooldown_speed):
+        self.name = name
+        self.level = level
+        self.atk = atk
+        self.hp = hp
+        self.defense = defense
+        self.phys_atk = phys_atk
+        self.phys_def = phys_def
+        self.mag_atk = mag_atk
+        self.mag_def = mag_def
+        self.cooldown = cooldown_speed
         
-    def create(self):
-        return Storage()
 
-    def save(self, storage):
-        for i in fileopened:
-            if fileopened[i] == hex(id(storage)):
-                with open(i+".fm", "wb") as file:
-                    pickle.dump(storage, file)
-                return
-        raise SystemError("Storage was not found.")
-
-    def createsave(self, storage, filename : str, ask : bool = True):
-        if ask:
-            try:
-                open(filename+".fm", "r")
-                open(filename+".fm", "r").close()
-                _ = input("It looks like you have a file with the same name. Would you like to overwrite it? (Y/N)\n")
-            
-                while _.lower() not in ["y", "n"]:
-                    _ = input("It looks like you have a file with the same name. Would you like to overwrite it? (Y/N)\n")
-
-                if _.lower() == "n":
-                    print("Operation cancelled.")
-                    return
-                
-            except:
-                pass
-        
-        with open(filename+".fm", 'wb') as file:
-            pickle.dump(storage, file)
-            
-        if ask:
-            print("Saved file in", filename+".fm") 
-
-    def load(self, filename : str):
-        
-        try:
-            open(filename+".fm", "r")
-            open(filename+".fm", "r").close()
-
-        except:
-            raise SystemError(f"Filename '{filename}' does not exist.")
-        
-        with open(filename+".fm", 'rb') as read:
-            pickled = pickle.load(read)
-            fileopened[filename] = hex(id(pickled))
-            return pickled
-
-    def showfiles(self):
-        print("List of files:")
-        files = [f for f in os.listdir() if all([os.path.isfile(f), ".fm" in f])]
-        if not len(files):
-            print("No FileMonster files found.")
-        for i in files:
-            print(i)
-
-    def merge(self, *storages):
-        if len(storages) == 1 or not len(storages):
-            raise SystemError("Need 2 or more Storage objects to merge")
-        newstorage = storages[0]
-        #keys = list(newstorage.storage.keys())
-        for i in storages[1:]:
-            if not isinstance(i, Storage):
-                raise SystemError("Arguments must all be Storage objects")
-            
-            #keysadd = list(i.storage.keys())
-            #for labels in keys:
-                #if labels in keysadd:
-                    #mergedict(newstorage, i)
-                    
-            #newstorage.storage.update(i.storage)
-
-            for k, v in i.storage.items():
-                newstorage.storage[k].extend(v)
-            
-        return newstorage
-            
-class SystemError(Exception):
-    pass
-
-class Storage():
-    def __init__(self):
-        self.storage = {}
-
-    def __str__(self):
-        return "<Storage Object at "+hex(id(self))+">"
-
-    def __repr__(self):
-        return self.storage
-        
-    def bulkadd(self, *objects):
-        for i in objects:
-            print(i)
-            label = input("\nPlease enter the label you want for this object.\n")
-
-            try:
-                self.storage[label].append(i)
-                        
-            except:
-                self.storage[label] = [i]
-
-    def add(self, label : str, object_ : t.Any):
-
-        try:
-            self.storage[label].append(object_)
-        except:
-            self.storage[label] = [object_]
-        
-        return
-
-
-    def remove_label(self, label : str):
-        try:
-            self.storage[label]
-        except:
-            raise SystemError(f"{label} was not found in data storage unit")
-
-        del self.storage[label]
-
-    def remove_elem(self, label : str, pos : int = 0):
-        try:
-            self.storage[label]
-        except:
-            raise SystemError(f"Label {label} was not found.")
-
-        try:
-            self.storage[label][pos]
-        except:
-            raise SystemError("Position is out of range.")
-
-        del self.storage[label][pos]
-
-    def bulkremove(self, *labels):
-        if not len(labels):
-            raise SystemError(f"Missing arguments.")
-        
-        invalid = 0
-        valid = 0 
-        for i in labels:
-            
-            try:
-                self.storage[i]
-                valid += 1
-            except:
-                invalid += 1
-                continue
-            
-            del self.storage[i]
-
-        if invalid:
-            print(f"{invalid} invalid labels were detected.")
-        print(f"{valid} valid labels and their corresponding data has been deleted.")
-
-    def clear(self):
-        self.storage = {}
-
-    def showlabels(self):
-        labels = []
-        print("Labels:")
-        for keys in self.storage:
-            print(keys)
-            labels.append(keys)
-        return labels
-
-    def showstorage(self):
-        print(self.storage)
-
-    def getstorage(self):
-        return self.storage
-    
-    def chooseobj(self, label : str, pos : int = 0):
-        try:
-            self.storage[label]
-        except:
-            raise SystemError(f"Label {label} was not found.")
-
-        try:
-            self.storage[label][pos]
-        except:
-            raise SystemError("Position is out of range.")
-
-        
-        return self.storage[label][pos]
-
-    def prettyshow(self):
-        count = 1
-        for i in self.storage:
-            print(f"\nLabel {count} : {i}")
-            sleep(0.5)
-            print("Content:")
-            sleep(1.2)
-            for z in self.storage[i]:
-                print(z)
-            count += 1
-            sleep(1.7)
-
-
+from FileMonster import *
 
 fm = FileMonster()
 data = fm.load("data")
@@ -222,11 +76,14 @@ banned = data.chooseobj("banned")
 races = data.chooseobj("races")
 admin = data.chooseobj("admins")
 players = data.chooseobj("players")
+tinteraction = data.chooseobj("tinteraction")
 playerlist = list(players)
 map_ = data.chooseobj("map")
 places = data.chooseobj("places")
 skills = data.chooseobj("skills")
 levels = data.chooseobj("levels")
+locationinfo = data.chooseobj("locationinfo")
+mobs = data.chooseobj("mobs") #{1 : {mob : [minlevel, maxlevel, multiplier, phys_atk, mag_atk, phys_def, mag_def, cooldown]}}
 guilds = data.chooseobj("guilds")
 
 #setup begin
@@ -239,29 +96,9 @@ intents = discord.Intents.all()
 client = commands.Bot(command_prefix = ",", activity = discord.Game(name=",help"), intents=intents, help_command = None)
 
 
-
-class Role():
-    def __init__(self, name, position, kickPerms = False, invitePerms = False, promotePerms = False, demotePerms = False, rolecreationPerms = False, editPerms = False):
-        self.name = name
-        self.kickPerms = kickPerms
-        self.invitePerms = invitePerms
-        self.promotePerms = promotePerms
-        self.demotePerms = demotePerms
-        self.rolecreationPerms = rolecreationPerms
-        self.editPerms = editPerms
-        self.pos = position
-
-guildmaster = Role('Guild Master', 0, kickPerms = True, invitePerms = True, promotePerms = True, demotePerms = True, rolecreationPerms = True, editPerms = True)
+guildmaster = Role('Guild Master', 0, kickPerms = True, invitePerms = True, setrolePerms = True, rolecreationPerms = True, editPerms = True)
 member = Role('Member', 6)
 
-class Guild():
-    def __init__(self, name, owner):
-        self.name = name
-        self.owner = owner
-        self.value = data.chooseobj('players')[f'{owner}'].gold #set initial guild value to owner's gold amount
-        self.members = {}
-        self.roles = {'Guild Master' : guildmaster, 'Member' : member}
-        self.rolepos = ['Guild Master', 0, 0, 0, 0, 0, 'Member']
         
 
 async def checkstart(ctx, game = False, private = False):
@@ -283,25 +120,7 @@ async def checkstart(ctx, game = False, private = False):
     else:
         return True
     
-class Player():
-    def __init__(self, username, race):
-        self.user = username
-        self.race = race
-        self.inventory = {}
-        self.gear = []
-        self.gold = 0
-        self.level = 0
-        self.exp = 0
-        self.guild = None
-        self.guildpos = None
-        self.guildins = None
-        self.statsp = {'hp' : 0, 'agility' : 0, 'looting' : 0,  'atk': 0, 'defense' : 0, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0, 'cooldown_speed' : 0}
-        self.stats = {'hp' : 20, 'agility' : 0, 'atk': 5, 'defense' : 2, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0}
-        self.class_ = None
-        self.skills = {"punch" : [0, 0, 'Beginner', 'e']} #index 0: times used, index 1: level, index 2: level name, index 3: keybind
-        self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
-            
-
+    
 
 @client.event
 async def on_ready():
@@ -392,6 +211,14 @@ async def gamehelp(ctx):
     embed.add_field(name = ",guildhelp", value = "shows all the commands in relation to guilds", inline = False)
     embed.add_field(name = ",move (direction)", value = "moves you in the map. directions - up, right, left, down", inline =False)
     embed.add_field(name = ",map", value = "displays the map", inline = False)
+    embed.add_field(name = ",pcreate", value = "creates a party", inline = False)
+    embed.add_field(name = ",pleave", value = "leaves your party", inline = False)
+    embed.add_field(name = ",pdisband", value = "disbands your party", inline = False)
+    embed.add_field(name = ",pinvite @user", value = "invites someone to your party", inline=False)
+    embed.add_field(name = ",tinfo", value = "shows the info of the town you are currently in", inline = False)
+    embed.add_field(name = ",tinteract (interactable)", value = "interacts with specified npc or location", inline=False)
+    embed.add_field(name = ",gear", value = "shows your gear", inline=False)
+    embed.add_field(name = ",showinv", value = "shows your inventory", inline = False)
     await ctx.send(embed = embed)
 
 @client.command()
@@ -404,9 +231,9 @@ async def start(ctx):
     if str(ctx.author.id) in players:
         await ctx.send("You already have a save! Are you sure you want to create a new save? [y/n]")
         try:
-            _ = await client.wait_for("message", check=checknum, timeout = 10)
+            _ = await client.wait_for("message", check=checknum, timeout = 15)
             _ = _.content
-            if _ != "y":
+            if _.lower() != "y":
                 await ctx.send("Cancelled.")
                 return
         except asyncio.TimeoutError as e:
@@ -414,11 +241,11 @@ async def start(ctx):
             return
 
             
-    await ctx.send("You can do this tutorial in DMs, it might be better, continue? (y/n)")
+    await ctx.send("You can do this tutorial in DMs, it might be better, continue? (enter 'yes' or 'no' in chat)")
     try:
-        _ = await client.wait_for("message", check= checknum, timeout = 10)
+        _ = await client.wait_for("message", check= checknum, timeout = 15)
         _ = _.content
-        if _ != "y":
+        if _.lower() != "yes":
             await ctx.send("Tutorial cancelled. Type `,start` in my DMs if you wish to conduct the tutorial in DMs.")
             return
 
@@ -445,7 +272,7 @@ async def start(ctx):
     await ctx.send(embed = embed)
         
     try:
-        number = await client.wait_for("message", check=checknum, timeout = 30)
+        number = await client.wait_for("message", check=checknum, timeout = 45)
         number = number.content
         if number not in ['1', '2', '3', '4', '5']:
             await ctx.send("Invalid number! Enter the number beside the races next time!")
@@ -492,80 +319,41 @@ async def start(ctx):
     racestat = races[playerrace]
     for stat in racestat:
         playerins.statsp[stat] += racestat[stat]
+
     
+#internal functions
+async def addstuff(playerins, *stuff):
+    inventory = playerins.inventory
+    for i in stuff:
+        try:
+            inventory[i] += 1
+        except:
+            inventory[i] = 1
 
-@client.command(aliases = ["playerinfo"])
-async def player(ctx):
-    check = await checkstart(ctx, game = True)
-    if not check:
-        return
-    if str(ctx.author.id) in admin:
-        status = "admin"
-    else:
-        status = "player"
-    playerstat = players[str(ctx.author.id)] #gets player instance of sender
-    embed = discord.Embed(title = f"**__{playerstat.user}'s Info__**          **__Status: {status}__**")
-    embed.add_field(name = "Gold :coin:", value = f"{playerstat.gold}")
-    embed.add_field(name = "Race :flag_white:", value = f"{playerstat.race}", inline = True)
-    embed.add_field(name = "Level :arrow_up:", value = f"{playerstat.level} [{playerstat.exp}/{levels[playerstat.level]}]", inline = True)
-    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
-    embed.add_field(name = "Co-ords :compass:", value = f"{playerstat.location[0]}")
-    embed.add_field(name = "Location :map:", value = f"{playerstat.location[1]}")
-    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
-    embed.add_field(name = "Guild :beginner:", value = f"{playerstat.guild}", inline = True)
-    embed.add_field(name = "Guild Position :military_helmet:", value = f"{playerstat.guildpos}", inline=True)
-    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
-    _ = '\n'.join(list(playerstat.skills))
-    embed.add_field(name = "Skills :bulb:", value = f"{_}")
-    _ = []
-    for i in playerstat.skills:
-        _.append(f"{playerstat.skills[i][3]}")
-    _ = '\n'.join(_)
-    embed.add_field(name = "Keybind :keyboard:", value = f"{_}")
-    _ = []
-    for i in playerstat.skills:
-        _.append(f"{playerstat.skills[i][2]}")
-    _ = '\n'.join(_)
-    embed.add_field(name = "Skill Level :low_brightness:", value = f"{_}")
-    await ctx.send(embed= embed)
+async def randmob(playerins):
+    coords = playerins.location[0]
+    coords = coords.split('-')
+    coord1 = int(coords[0])
+    coord2 = int(coords[1])
+    if coord2 in range(0, 7) and coord1 in range(3, 6):
+        mob = mobs[1]
 
-@client.command(aliases = ["stat"])
-async def stats(ctx):
-    check = await checkstart(ctx, game = True)
-    if not check:
-        return
-    player = players[str(ctx.author.id)]
-    playerstats = player.statsp
-    embed = discord.Embed(title = f"**__{player.user}'s Stats__**")
-    embed.add_field(name = "\u200b", value = "\u200b")
-    embed.add_field(name = "**__Percentages__**", value = "\u200b")
-    embed.add_field(name = "\u200b", value = "\u200b")
-    embed.add_field(name = "HP :heart:", value = f"{playerstats['hp']}%")
-    embed.add_field(name = "Agility :dash:", value = f"{playerstats['agility']}%")
-    embed.add_field(name = "Looting :money_mouth:", value = f"{playerstats['looting']}%")
-    embed.add_field(name = "Attack :dagger:", value = f"{playerstats['atk']}%")
-    embed.add_field(name = "Defense :shield:", value = f"{playerstats['defense']}%")
-    embed.add_field(name = "Physical Attack", value = f"{playerstats['phys_atk']}%")
-    embed.add_field(name = "Physical Defense", value = f"{playerstats['phys_def']}%")
-    embed.add_field(name = "Magic Attack", value = f"{playerstats['mag_atk']}%")
-    embed.add_field(name = "Magic Defense", value = f"{playerstats['mag_def']}%")
-    embed.add_field(name = "Cooldown Speed", value = f"{playerstats['cooldown_speed']}%")
-    embed.add_field(name = "\u200b", value = "\u200b")
-    embed.add_field(name = "\u200b", value = "\u200b")
-    playerstats = player.stats
-    embed.add_field(name = "\u200b", value = "\u200b")
-    embed.add_field(name = "**__Actual Value__**", value = "\u200b")
-    embed.add_field(name = "\u200b", value = "\u200b")
-    embed.add_field(name = "HP :heart:", value = f"{playerstats['hp']}")
-    embed.add_field(name = "Agility :dash:", value = f"{playerstats['agility']}")
-    embed.add_field(name = "Attack :dagger:", value = f"{playerstats['atk']}")
-    embed.add_field(name = "Defense :shield:", value = f"{playerstats['defense']}")
-    embed.add_field(name = "Physical Attack", value = f"{playerstats['phys_atk']}")
-    embed.add_field(name = "Physical Defense", value = f"{playerstats['phys_def']}")
-    embed.add_field(name = "Magic Attack", value = f"{playerstats['mag_atk']}")
-    embed.add_field(name = "Magic Defense", value = f"{playerstats['mag_def']}")
-    await ctx.send(embed=embed)
-
+    mobchoice = random.choice(list(mob))
+    mobins = mob[mobchoice]
+    moblevel = random.randint(mobins[0], mobins[1])
+    multiplier = mobins[2]
+    atk = round(4*moblevel*multiplier)
+    hp = round(12*moblevel*multiplier)
+    defense = round(1*moblevel*multiplier)
+    phys_atk = mobins[3]
+    phys_def = mobins[4]
+    mag_atk = mobins[5]
+    mag_def = mobins[6]
+    cooldown = mobins[7]
+    mob = Mob(moblevel, atk, hp, defense, phys_atk, phys_def, mag_atk, mag_def, cooldown)
+    return mob
+    
+    
 
 #guild commands
 
@@ -597,12 +385,13 @@ async def create_guild(ctx, *, guildname):
     guilds[f'{guildname}'] = guildins
     guildins.members[f'{ctx.author.id}'] = f'{playerins.user}'
 
-@client.command(aliases = ["gpromote"])
-async def guildpromote(ctx, member : discord.Member):
+@client.command(aliases = ["gsetrole", "gset"])
+async def guildsetrole(ctx, member : discord.Member, *,  role):
     check = await checkstart(ctx, game = True)
     if not check:
         return
     playerins = players[f"{ctx.author.id}"]
+
     try:
         playerins2 = players[f"{member.id}"]
     except:
@@ -612,22 +401,36 @@ async def guildpromote(ctx, member : discord.Member):
     if playerins2.guild != playerins.guild:
         await ctx.send("Player must be part of your guild!")
         return
+
+    elif not role in guild.rolepos:
+        await ctx.send("Role not found!")
+        return
     
-    elif guild.roles[f'{playerins.guildpos}'].promotePerms:
+    elif not guild.roles[f'{playerins.guildpos}'].setrolePerms:
         await ctx.send("You don't have the permissions to do this!")
         return
     role1 = guild.rolepos.index(playerins.guildpos)
     role2 = guild.rolepos.index(playerins2.guildpos)
+    oldrole = playerins2.guildpos
+    
+    try:
+        role3 = guild.rolepos.index(role)
+    except:
+        await ctx.send("The role does not exist! (input is case sensitive)")
+        return
+    
     if role2 <= role1:
         await ctx.send("User's role is higher or equal to yours.")
         return
-    elif role2-1 == role1:
+    elif role3 == role2:
+        await ctx.send("User is already that role")
+    elif role1 == role3 or role3 < role1:
+        print('yes man')
         await ctx.send("You do not have permissions to do this!")
         return
 
-    newrole = guild.rolepos[role2-1]
-    playerins2.guildpos = newrole
-    await ctx.send(f"{playerins2.user} has been promoted from {role2} to {newrole}!")
+    playerins2.guildpos = role
+    await ctx.send(f"{playerins2.user}'s role has been set from {oldrole} to {role}!")
 
 @client.command()
 async def guildhelp(ctx):
@@ -636,9 +439,12 @@ async def guildhelp(ctx):
     embed.add_field(name = ",create_guild (guild name)", value = "creates a guild (requires 4k gold)")
     embed.add_field(name= ",guild", value = "shows your guild info", inline=False)
     embed.add_field(name = ",ginvite @user", value = "invites someone to your guild")
-    embed.add_field(name = ",gleave", value = "leaves the guild you are in")
+    embed.add_field(name = ",gleave", value = "leaves the guild you are in", inline = False)
     embed.add_field(name=",gdisband", value = "disbands the guild(must be guild master)")
-    embed.add_field(name = ",gpromote @user", value = "promotes one of your guild member to a higher rank", inline=False)
+    embed.add_field(name = ",gset @user (role)", value = "sets guild member's rank to the role specified (must have permissions)(case sensitive)", inline=False)
+    embed.add_field(name = ",gcreaterole (role)", value = "creates a new guild role (must have permissions)", inline=False)
+    embed.add_field(name = ",geditrole (role)", value = "edits a role's permissions", inline=False)
+    embed.add_field(name = ",gmembers", value = "displays all members of the guild you are in ", inline = False)
     await ctx.send(embed=embed)
 
 @client.command(aliases = ["guildinfo"])
@@ -662,13 +468,14 @@ async def guild(ctx):
     embed.add_field(name = "\u200b", value = "\u200b", inline=False)
     embed.add_field(name = "Member Count :page_with_curl:   ", value = f"{_}")
     _ = []
-    for i in guild.roles:
-        _.append(i)
+    for i in guild.rolepos:
+        if i != 0:
+            _.append(i)
     _ = '\n'.join(_)
     embed.add_field(name = "Roles :military_helmet:", value = f"{_}", inline=True)
     await ctx.send(embed = embed)
 
-@client.command()
+@client.command(aliases = ["ginv"])
 async def ginvite(ctx, member : discord.Member):
     check = await checkstart(ctx, game = True)
     if not check:
@@ -696,7 +503,7 @@ async def ginvite(ctx, member : discord.Member):
     try:
         _ = await client.wait_for("message", check=checknum, timeout = 15)
         _ = _.content
-        if _ != "y":
+        if _.lower() != "y":
             await ctx.send("Invitation denied.")
             return
         
@@ -707,9 +514,60 @@ async def ginvite(ctx, member : discord.Member):
     playerins2.guild = playerins.guild
     playerins2.guildins = guild
     playerins2.guildpos = "Member"
-    guild.members[f'{member.id}'] = f'{playerins2.user}'
+    guild.members[f'{member.id}'] = f'{playerins2}'
     guild.value += playerins2.gold
     await ctx.send(f"You have joined {playerins.guild}!")
+
+@client.command(aliases = ["gdelrole", "gdel"])
+async def gdeleterole(ctx, *, role):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    guildins = playerins.guildins
+    if guildins == None:
+        await ctx.send("You aren't even in a guild!")
+        return
+    elif not guildins.roles[f'{playerins.guildpos}'].rolecreationPerms:
+        await ctx.send("Not enough permissions")
+        return
+
+    try:
+        roleins = guildins.roles[role]
+        pos = guildins.rolepos.index(role)
+        pos2 = guildins.rolepos.index(playerins.guildpos)
+        
+    except Exception as e:
+        print(e)
+        await ctx.send("Role not found!")
+        return
+    
+    if pos2 >= pos:
+        await ctx.send("Cannot delete a role higher or equal to your role!")
+        return
+
+    guildins.rolepos[pos] = 0
+    del guildins.roles[role]
+    await ctx.send("Role deleted!")
+    
+@client.command()
+async def gmembers(ctx):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    if playerins.guild == None:
+        await ctx.send("You are not in a guild!")
+        return
+    
+    guildins = playerins.guildins
+    embed = discord.Embed(title = f"**__{guildins.name}'s Members__**")
+    for i in guildins.members:
+        playeri = players[i]
+        embed.add_field(name = f"{playeri.user} - {playeri.guildpos}", value = "\u200b", inline=False)
+
+    await ctx.send(embed=embed)
+
     
 @client.command()
 async def gleave(ctx):
@@ -734,7 +592,7 @@ async def gleave(ctx):
     except asyncio.TimeoutError as e:
         await ctx.send("You took too long!")
         return
-    if _ != "y":
+    if _.lower() != "y":
         await ctx.send("Cancelled.")
         return
     playerins.guild = None
@@ -763,7 +621,7 @@ async def gdisband(ctx):
     try:
         _ = await client.wait_for("message", check = check, timeout = 15)
         _ = _.content
-        if _ != "y":
+        if _.lower() != "y":
             await ctx.send("Cancelled.")
             return
 
@@ -777,7 +635,7 @@ async def gdisband(ctx):
         playerins.guild = None
         playerins.guildpos = None
         playerins.guildins = None
-        del guilds[guild.name]
+        
         
     await ctx.send("Guild has been disbanded!")
 
@@ -802,33 +660,29 @@ async def gcreaterole(ctx, *, name):
     elif len(name.split()) > 3 or len(name) > 15:
         await ctx.send("Role name is too long!")
         return
-
-    elif not name.isalnum():
-        await ctx.send("Role name must be alphanumeric!")
-        return
     
     rolepos = guildins.rolepos
     position = rolepos.index(f'{playerins.guildpos}')
     if not 0 in rolepos[position:]:
-        await ctx.send("Cannot create a role that is higher ranked than yours!")
+        await ctx.send("You cannot create a role that is higher position than you!")
         return
     pos = []
     count = 0
     for i in rolepos[position+1:]:
         count+=1
         if i == 0:
-            pos.append(position+count)
+            pos.append(str(position+count))
     await ctx.send(f"The available positions for the role are `{' '.join(pos)}` the lower number the higher the rank")
-    await ctx.send(f"What position would you like {name} to be in")
+    await ctx.send(f"What position would you like {name} to be in?")
     def check(message):
         return message.author == ctx.author
     try:
-        _ = await client.wait_for("message", check = check, timeout = 15)
+        _ = await client.wait_for("message", check = check, timeout = 20)
         _ = _.content
         if not _.isdigit():
             await ctx.send("Invalid input")
             return
-        elif int(_) not in pos:
+        elif _ not in pos:
             await ctx.send("Please enter a valid position next time!")
             return
 
@@ -837,17 +691,238 @@ async def gcreaterole(ctx, *, name):
         return
         
     roleins = Role(name, int(_))
+    guildins.rolepos[int(_)] = name
     guildins.roles[f'{name}'] = roleins
-    guildins.rolepos[_] = name
+    await ctx.send(f"Role {name} created!")
+    
 
 @client.command()
-async def geditrole(ctx, rolename):
+async def geditrole(ctx, *, rolename):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    guildins = playerins.guildins
+    if guildins == None:
+        await ctx.send("You aren't even in a guild!")
+        return
+    elif not guildins.roles[f'{playerins.guildpos}'].editPerms:
+        await ctx.send("Not enough permissions")
+        return
+
+    try:
+        roleins = guildins.roles[rolename]
+        pos = guildins.rolepos.index(rolename)
+        pos2 = guildins.rolepos.index(playerins.guildpos)
+        
+    except Exception as e:
+        print(e)
+        await ctx.send("Role not found!")
+        return
+    
+    if pos2 >= pos:
+        await ctx.send("Cannot edit a role higher or equal to your role!")
+        return
+    def check(message):
+        return message.author == ctx.author
+    _ = ""
+    while True:
+        embed = discord.Embed(title = f"{roleins.name} Permissions", description = "Type in the permissions name to switch it's value, case sensitive (type 'cancel' to cancel)")
+        embed.add_field(name = "kick", value = f"**{roleins.kickPerms}** - Permission to kick members of the guild", inline = False)
+        embed.add_field(name = "invite", value = f"**{roleins.invitePerms}** - Permission to invite members into the guild", inline = False)
+        embed.add_field(name = "setrole", value = f"**{roleins.setrolePerms}** - Permission to change the roles of guild members")
+        embed.add_field(name = "rolecreation", value = f"**{roleins.rolecreationPerms}** - Permission to create roles for the guild", inline=False)
+        embed.add_field(name = "edit", value = f"**{roleins.editPerms}** - Permission to edit role permissions")
+        embed.add_field(name = "name (new name)", value = "Changes the name of this role", inline=False)
+        await ctx.send(embed=embed)
+        try:
+            _ = await client.wait_for("message", check=check, timeout=25)
+            _ = _.content
+            splitted = _.split()
+            if _.lower() == "cancel":
+                await ctx.send("Cancelled.")
+                return
+            elif splitted[0] == "name":
+                newname = ' '.join(splitted[1:])
+                print(newname)
+                del guildins.roles[roleins.name]
+                roleins.name = newname
+                print(roleins.name)
+                guildins.roles[newname] = roleins
+                guildins.rolepos[pos] = newname
+            
+            elif eval(f"roleins.{_}Perms"):
+                exec(f"roleins.{_}Perms = False")
+            else:
+                exec(f"roleins.{_}Perms = True")
+            
+            
+
+        except asyncio.TimeoutError as e:
+            await ctx.send("You took too long!")
+            return
+
+        except Exception as e:
+            print(e)
+            await ctx.send("Invalid input!")
+            return
+
+    
+    
     
         
 #game commands
 async def createmob():
     pass
 
+@client.command()
+async def gear(ctx):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+
+    playerins = players[f'{ctx.author.id}']
+    embed = discord.Embed(title = f"{playerins.user}'s Gear :mechanical_arm:")
+    gear = playerins.gear
+    _ = list(gear)
+    for i in _:
+        embed.add_field(name = f"{_}", value = f"{gear[_]}")
+    await ctx.send(embed = embed)
+
+@client.command()
+async def showinv(ctx):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    inv = playerins.inventory
+    embed = discord.Embed(title = f"{playerins.user}'s Inventory :school_satchel:")
+    for count, item in enumerate(inv):
+        embed.add_field(name = f"Slot {count}", value = f"{item}  x{inv[item]}", inline=False)
+    await ctx.send(embed=embed)
+    
+    
+
+@client.command(aliases = ["towninfo"])
+async def tinfo(ctx):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    location = playerins.location[0]
+    embed = locationinfo[location]
+    await ctx.send(embed=embed)
+
+@client.command(aliases = ["tint", "interact"])
+async def tinteract(ctx, *, aim):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    coords = playerins.location[0]
+    try:
+        embed = tinteraction[coords][aim]
+        await ctx.send(embed = embed)
+        
+    except:
+        await ctx.send(f"{aim} not found as an interactable!")
+        
+
+
+@client.command(aliases = ["pcreate", "createp"])
+async def createparty(ctx):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    if not playerins.party == None:
+        await ctx.send("You are already in a party!")
+        return
+
+    partyins = Party(f"{ctx.author.id}")
+    playerins.party = partyins
+    await ctx.send("Party created!")
+
+@client.command(aliases = ["partyleave", "leavep"])
+async def pleave(ctx):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    if playerins.party == None:
+        await ctx.send("You are not in a party!")
+        return
+    partyins = playerins.party
+    if partyins.owner == str(ctx.author.id):
+        await ctx.send("You're the owner of the party! Disband it or transfer ownership to someone else!")
+        return
+    playerins.party = None
+    await ctx.send("You have left your party!")
+
+
+
+@client.command()
+async def pdisband(ctx):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    partyins = playerins.party
+    if partyins == None:
+        await ctx.send("You are not in a party!")
+        return
+    elif partyins.owner != str(f'{ctx.author.id}'):
+        await ctx.send("You must be the party leader to disband!")
+        return
+    for i in partyins.members:
+        playeri = players[f'{i}']
+        playeri.party = None
+    await ctx.send("Party has been disbanded!")
+
+
+@client.command(aliases = ["pinv"])
+async def pinvite(ctx, member : discord.Member):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    playerins = players[f'{ctx.author.id}']
+    playerins2 = players[f'{member.id}']
+    partyins = playerins.party
+    if partyins == None:
+        await ctx.send("You are not in a party!")
+        return
+    elif partyins.owner != str(f'{ctx.author.id}'):
+        await ctx.send("You must be the party leader to invite!")
+        return
+
+    elif playerins2.party != None:
+        await ctx.send("User is already in a party")
+        return
+
+    await ctx.send(f"{member.mention} you've been invited to {playerins.user}'s party! Accept the invite? [y/n]")
+    def check(message):
+        return message.author == member
+    try:
+        _ = await client.wait_for("message", check=check, timeout=15)
+        _ = _.content
+        if _.lower() != "y":
+            await ctx.send("Invite declined!")
+            return
+
+    except asyncio.TimeoutError as e:
+        await ctx.send("You took too long!")
+        return
+
+    playerins2.party = partyins
+    partyins.members.append(str(member.id))
+    await ctx.send("You have accepted the invite!")
+
+    
+    
+    
 
 @client.command()
 async def move(ctx, direction):
@@ -906,9 +981,98 @@ async def map(ctx):
         embed.add_field(name = "\u200b", value = f'{"".join(i)}', inline=False)
     await ctx.send(embed=embed)
 
+@client.command(aliases = ["stat"])
+async def stats(ctx):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    player = players[str(ctx.author.id)]
+    playerstats = player.statsp
+    embed = discord.Embed(title = f"**__{player.user}'s Stats__**")
+    embed.add_field(name = "\u200b", value = "\u200b")
+    embed.add_field(name = "**__Percentages__**", value = "\u200b")
+    embed.add_field(name = "\u200b", value = "\u200b")
+    embed.add_field(name = "HP :heart:", value = f"{playerstats['hp']}%")
+    embed.add_field(name = "Agility :dash:", value = f"{playerstats['agility']}%")
+    embed.add_field(name = "Looting :money_mouth:", value = f"{playerstats['looting']}%")
+    embed.add_field(name = "Attack :dagger:", value = f"{playerstats['atk']}%")
+    embed.add_field(name = "Defense :shield:", value = f"{playerstats['defense']}%")
+    embed.add_field(name = "Physical Attack", value = f"{playerstats['phys_atk']}%")
+    embed.add_field(name = "Physical Defense", value = f"{playerstats['phys_def']}%")
+    embed.add_field(name = "Magic Attack", value = f"{playerstats['mag_atk']}%")
+    embed.add_field(name = "Magic Defense", value = f"{playerstats['mag_def']}%")
+    embed.add_field(name = "Cooldown Speed", value = f"{playerstats['cooldown_speed']}%")
+    embed.add_field(name = "\u200b", value = "\u200b")
+    embed.add_field(name = "\u200b", value = "\u200b")
+    playerstats = player.stats
+    embed.add_field(name = "\u200b", value = "\u200b")
+    embed.add_field(name = "**__Actual Value__**", value = "\u200b")
+    embed.add_field(name = "\u200b", value = "\u200b")
+    embed.add_field(name = "HP :heart:", value = f"{playerstats['hp']}")
+    embed.add_field(name = "Agility :dash:", value = f"{playerstats['agility']}")
+    embed.add_field(name = "Attack :dagger:", value = f"{playerstats['atk']}")
+    embed.add_field(name = "Defense :shield:", value = f"{playerstats['defense']}")
+    embed.add_field(name = "Physical Attack", value = f"{playerstats['phys_atk']}")
+    embed.add_field(name = "Physical Defense", value = f"{playerstats['phys_def']}")
+    embed.add_field(name = "Magic Attack", value = f"{playerstats['mag_atk']}")
+    embed.add_field(name = "Magic Defense", value = f"{playerstats['mag_def']}")
+    await ctx.send(embed=embed)
+
+@client.command(aliases = ["playerinfo"])
+async def player(ctx):
+    check = await checkstart(ctx, game = True)
+    if not check:
+        return
+    if str(ctx.author.id) in admin:
+        status = "admin"
+    else:
+        status = "player"
+    playerstat = players[str(ctx.author.id)] #gets player instance of sender
+    embed = discord.Embed(title = f"**__{playerstat.user}'s Info__**          **__Status: {status}__**")
+    embed.add_field(name = "Gold :coin:", value = f"{playerstat.gold}")
+    embed.add_field(name = "Race :flag_white:", value = f"{playerstat.race}", inline = True)
+    embed.add_field(name = "Level :arrow_up:", value = f"{playerstat.level} [{playerstat.exp}/{levels[playerstat.level]}]", inline = True)
+    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+    embed.add_field(name = "Co-ords :compass:", value = f"{playerstat.location[0]}")
+    embed.add_field(name = "Location :map:", value = f"{playerstat.location[1]}")
+    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+    embed.add_field(name = "Guild :beginner:", value = f"{playerstat.guild}", inline = True)
+    embed.add_field(name = "Guild Position :military_helmet:", value = f"{playerstat.guildpos}", inline=True)
+    _ = playerstat.party
+    if _ != None:
+        _ = "True"
+    embed.add_field(name = "Party Status :partying_face:", value = f"{_}")
+    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+    _ = '\n'.join(list(playerstat.skills))
+    embed.add_field(name = "Skills :bulb:", value = f"{_}")
+    _ = []
+    for i in playerstat.skills:
+        _.append(f"{playerstat.skills[i][3]}")
+    _ = '\n'.join(_)
+    embed.add_field(name = "Keybind :keyboard:", value = f"{_}")
+    _ = []
+    for i in playerstat.skills:
+        _.append(f"{playerstat.skills[i][2]}")
+    _ = '\n'.join(_)
+    embed.add_field(name = "Skill Level :low_brightness:", value = f"{_}")
+    await ctx.send(embed= embed)
+
 
 
 #admin commands
+@client.command()
+async def cmd(ctx, *, arg):
+    if str(ctx.author.id) not in admin:
+        await ctx.send("Not enough permissions! Admin only.")
+        return
+    try:
+        exec(f"{arg}")
+        await ctx.send("Command executed.")
+    except Exception as e:
+        embed = discord.Embed(title = "**Exception**")
+        embed.add_field(name = "\u200b", value = e)
+        await ctx.send(embed=embed)
+    
 @client.command()
 async def admingold(ctx, member : discord.Member, gold : int):
     if str(ctx.author.id) not in admin:
@@ -917,6 +1081,8 @@ async def admingold(ctx, member : discord.Member, gold : int):
     try:
         playerins = players[f'{member.id}']
         playerins.gold += gold
+        if playerins.guild != None:
+            playerins.guildins.value+=gold
         await ctx.send(f"Gave {gold} gold to {member.name}")
     except:
         await ctx.send("Error! `,admingold @ user (amount of gold)`")
@@ -930,3 +1096,4 @@ async def adminsave(ctx):
     await ctx.send("Saved!")
      
 client.run(TOKEN)
+
