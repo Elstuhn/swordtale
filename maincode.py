@@ -9,8 +9,6 @@ import random
 from discord.ext import commands, tasks
 from datetime import datetime
 from collections import defaultdict
-#add banreasons obj in data fm
-#banreasons will be dict {playerid : [banreason, date of ban, banned by who]}
 #complete systemban
 fileopened = {}
 class Player():
@@ -52,9 +50,9 @@ class Role():
         self.pos = position
 
 class Guild():
-    def __init__(self, name, owner):
+    def __init__(self, name : str, owner : str):
         self.name = name
-        self.owner = owner
+        self.owner = owner # ctx.author.id in str form
         self.value = data.chooseobj('players')[f'{owner}'].gold #set initial guild value to owner's gold amount
         self.members = {} #memberid : membername
         self.roles = {'Guild Master' : guildmaster, 'Member' : member}
@@ -78,20 +76,20 @@ from FileMonster import *
 
 fm = FileMonster()
 data = fm.load("data")
-banned = data.chooseobj("banned") # dict, contains playerid in string
+banned = data.chooseobj("banned") # list of banned playerids
 races = data.chooseobj("races")
-admin = data.chooseobj("admins")
+admin = data.chooseobj("admins") # list of admin ids
 players = data.chooseobj("players")
-tinteraction = data.chooseobj("tinteraction")
+tinteraction = data.chooseobj("tinteraction") # dict {'coords' : {'npc or locations' : discord.Embed}
 playerlist = list(players)
-map_ = data.chooseobj("map")
+map_ = data.chooseobj("map") # nested list
 baninfo = data.chooseobj("baninfo") #dict {'playerid' : [banreason, date of ban, banned by who]}
 places = data.chooseobj("places")
 skills = data.chooseobj("skills")
 levels = data.chooseobj("levels")
-locationinfo = data.chooseobj("locationinfo")
+locationinfo = data.chooseobj("locationinfo") # dict {'coords' : discord.Embed}
 mobs = data.chooseobj("mobs") #{1 : {mob : [minlevel, maxlevel, multiplier, phys_atk, mag_atk, phys_def, mag_def, cooldown]}}
-guilds = data.chooseobj("guilds") # dict {'guild
+guilds = data.chooseobj("guilds") # dict {'guildname' : guild instance}
 
 #setup begin
 with open('token', 'rb') as readfile:
@@ -1264,7 +1262,7 @@ async def systemban(ctx, member : discord.Member, *, reason):
 			memberins.guildpos = None
 			memberins.guildins = None
 					
-		# add remove guild from data.fm guild file
+		del guilds[playerins.guild]
 		playerins.guild = None
 		playerins.guildpos = None
 		playerins.guildins = None
@@ -1278,7 +1276,7 @@ async def systemban(ctx, member : discord.Member, *, reason):
 	today = datetime.now()
 	banperson = ctx.author.name + ctx.author.discriminator
 	banpersonid = str(ctx.author.id)
-	today = today.strftimes("%A %d %B %Y %I:%M %p %Z", )
+	today = today.strftime("%A %d %B %Y %I:%M %p %Z")
 	baninfo[str(member.id)] = [reason, today, banperson, banpersonid]
 					
 					
