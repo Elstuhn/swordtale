@@ -9,7 +9,9 @@ import random
 from discord.ext import commands, tasks
 from datetime import datetime
 from collections import defaultdict
-
+#add banreasons obj in data fm
+#banreasons will be dict {playerid : [banreason, date of ban, banned by who]}
+#complete systemban
 fileopened = {}
 class Player():
     def __init__(self, username, race):
@@ -37,7 +39,7 @@ class Adventurers_Guild():
 class Party():
     def __init__(self, owner):
         self.owner = owner
-        self.members = [owner]
+        self.members = [owner] #owner will be player id
 
 class Role():
     def __init__(self, name, position, kickPerms = False, invitePerms = False, setrolePerms = False, rolecreationPerms = False, editPerms = False):
@@ -76,19 +78,20 @@ from FileMonster import *
 
 fm = FileMonster()
 data = fm.load("data")
-banned = data.chooseobj("banned")
+banned = data.chooseobj("banned") # dict, contains playerid in string
 races = data.chooseobj("races")
 admin = data.chooseobj("admins")
 players = data.chooseobj("players")
 tinteraction = data.chooseobj("tinteraction")
 playerlist = list(players)
 map_ = data.chooseobj("map")
+baninfo = data.chooseobj("baninfo") #dict {'playerid' : [banreason, date of ban, banned by who]}
 places = data.chooseobj("places")
 skills = data.chooseobj("skills")
 levels = data.chooseobj("levels")
 locationinfo = data.chooseobj("locationinfo")
 mobs = data.chooseobj("mobs") #{1 : {mob : [minlevel, maxlevel, multiplier, phys_atk, mag_atk, phys_def, mag_def, cooldown]}}
-guilds = data.chooseobj("guilds")
+guilds = data.chooseobj("guilds") # dict {'guild
 
 #setup begin
 with open('token', 'rb') as readfile:
@@ -1245,6 +1248,40 @@ async def admingold(ctx, member : discord.Member, gold : int):
     except:
         await ctx.send("Error! `,admingold @ user (amount of gold)`")
         
+@client.command()
+async def systemban(ctx, member : discord.Member, *, reason):
+	if str(ctx.author.id) not in admin:
+		await ctx.send("Sorry! You do not have permission.")
+		return
+	elif str(member.id) in banned:
+		await ctx.send("This user is already banned!")
+		return
+	playerins = players[str(member.id)]
+	if not playerins.guild:
+		for i in playerins.guild.members:
+			memberins = players[i]
+			memberins.guild = None
+			memberins.guildpos = None
+			memberins.guildins = None
+					
+		# add remove guild from data.fm guild file
+		playerins.guild = None
+		playerins.guildpos = None
+		playerins.guildins = None
+	elif not playerins.party:
+		for i in playerins.party.members:
+			memberins = players[i]
+			memberins.party = None
+		playerins.party = None
+		
+	banned.append(str(member.id))
+	today = datetime.now()
+	banperson = ctx.author.name + ctx.author.discriminator
+	banpersonid = str(ctx.author.id)
+	today = today.strftimes("%A %d %B %Y %I:%M %p %Z", )
+	baninfo[str(member.id)] = [reason, today, banperson, banpersonid]
+					
+					
 @client.command()
 async def adminsave(ctx):
     if str(ctx.author.id) not in admin:
