@@ -9,7 +9,7 @@ import random
 from discord.ext import commands, tasks
 from datetime import datetime
 from collections import defaultdict
-#complete systemban
+#calculate function so that damage values can be changed in the middle of battle 
 fileopened = {}
 class Player():
     def __init__(self, username, race):
@@ -407,7 +407,27 @@ async def returntaskmobattack(seconds, func, ctx, playerins, dmg, mob):
     tasktest = asyncio.ensure_future(taskbattle(seconds, func, ctx, playerins, dmg, mob))
     return tasktest
 
-async def message(ctx, check, partymembers):
+async def calculatemobdmg(playerins, mobins):
+	playerstats = playerins.stats
+    mobdmg = atk-(playerstats['defense']*0.3)
+    if mobdmg <= 0:
+        mobdmg = 1
+    mag_atk = mobins.mag_atk *0.35 - (playerstats['mag_def']*0.35)
+    if mag_atk <= 0:
+        mag_atk = 1
+    phys_atk = mobins.phys_atk * 0.35
+    phys_atk = (playerins['phys_def']*0.35)-phys_atk
+    if phys_atk > 0:
+        phys_atk = 0
+    else:
+        phys_atk = round(abs(phys_atk))
+    mobdmg = mobdmg + phys_atk + mag_atk
+	return mobdmg
+
+async def calculateplayerdmg(playerins, mobins):
+
+			
+async def message(ctx, check, partymembers, buffs):
     while True:
         try:
             _ = await client.wait_for("message", check = check, timeout = 10)
@@ -420,15 +440,19 @@ async def message(ctx, check, partymembers):
 		try:
 			skillinfo = playerins.skills[_]
 			atk = playerins.stats['atk']*skillinfo[4]
-			mag_atk = 
+			mag_atk = playerins.stats['mag_atk']*skillinfo[6]
+			phys_atk = playerins.stats['phys_atk']*skillinfo[5]
 			
 			
+		except:
+			await ctx.send("Skill not found!")
 					
         if _ == "ow":
             await ctx.send("haha rekt")
         await asyncio.sleep(1)
 
-async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict): # buffs {"
+async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict):
+# buffs {"buffname" : ["effects"('statname:value(buff values would be in percentages but here itll be the numerical value of the percentage increase)statname2:value%'), backgroundtime at which it had been applied, duration]}
     while True:
         if any([
             mob.hp <= 0,
@@ -438,8 +462,19 @@ async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict
             mobattack.cancel()
             checkmessage.cancel()
             break
-		now = backgroundtime
-																																																																															
+		for i in buffs:
+			buff = buffs[i] #list
+			time = backgroundtime
+			time -= buff[1] #time(seconds) passed after buff had been applied
+			if time >= buff[2]:
+				effects = buff[0]
+				effects = effects.split()
+				for j in effects:
+					j = j.split(':')
+					buffname = j[0]
+					buffvalue = j[1]
+					exec(f'playerins.stats[{buffname}] -= {buffvalue}')
+				del buffs[i]
         await asyncio.sleep(1)
     
     
@@ -452,6 +487,7 @@ async def test(ctx):
     mobattack = returntaskmobattack(4, monsterattack, ctx, playerins, 5, mobins)
     mobattack = await mobattack
     checkmessage = asyncio.ensure_future(message(ctx, check))
+	buffs = {}
     await checkdead(ctx, mobattack, checkmessage, mobins, playerins)
     if playerins.stats['hp'] <= 0:
         await ctx.send("Haha u lost noob idiot")
