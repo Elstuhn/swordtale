@@ -27,7 +27,7 @@ class Player():
         self.statsp = {'hp' : 0, 'agility' : 0, 'looting' : 0,  'atk': 0, 'defense' : 0, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0, 'cooldown_speed' : 0}
         self.stats = {'maxhp' : 20, 'hp' : 20, 'agility' : 0, 'atk': 5, 'defense' : 2, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0}
         self.class_ = None
-        self.skills = {"e" : [0, 0, 'Beginner', 'punch']} #index 0: times used, index 1: level, index 2: level name, index 3: attack name, index 4: attack multiplier, 5: phy_atk multiplier, 6: mag_atk multiplier
+        self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: attack name, index 4: attack multiplier, 5: phy_atk multiplier, 6: mag_atk multiplier 7: {'buffname' : [seconds, ['buffs']]} 8: cooldown time(seconds)
         self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
         self.status = "Adventurer"
 
@@ -416,11 +416,19 @@ async def message(ctx, check, partymembers):
             await ctx.send("You took too long!")
             return 0
         _ = _.content
+		playerins = players[str(ctx.author.id)]
+		try:
+			skillinfo = playerins.skills[_]
+			atk = playerins.stats['atk']*skillinfo[4]
+			mag_atk = 
+			
+			
+					
         if _ == "ow":
             await ctx.send("haha rekt")
         await asyncio.sleep(1)
 
-async def checkdead(ctx, mobattack, checkmessage, mob, playerins):
+async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict): # buffs {"
     while True:
         if any([
             mob.hp <= 0,
@@ -430,6 +438,8 @@ async def checkdead(ctx, mobattack, checkmessage, mob, playerins):
             mobattack.cancel()
             checkmessage.cancel()
             break
+		now = backgroundtime
+																																																																															
         await asyncio.sleep(1)
     
     
@@ -1199,8 +1209,10 @@ async def explore(ctx):
             return message.author == ctx.author
     else:
         partymembers = playerins.party.members
-        def check(message, partymembers):
+        def check(message):
             return message.author in partymembers
+		    
+	#message(ctx, check, partymembers)
         
 ##    mobattack = returntaskmobattack(mobins.cooldown, monsterattack, ctx, playerins, mobdmg, mobins)
 ##    mobattack = await mobattack
