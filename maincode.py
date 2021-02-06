@@ -425,7 +425,21 @@ async def calculatemobdmg(playerins, mobins):
 	return mobdmg
 
 async def calculateplayerdmg(playerins, mobins):
-
+	playerstats = playerins.stats
+    mobdmg = atk-(playerstats['defense']*0.3)
+    if mobdmg <= 0:
+        mobdmg = 1
+    mag_atk = mobins.mag_atk *0.35 - (playerstats['mag_def']*0.35)
+    if mag_atk <= 0:
+        mag_atk = 1
+    phys_atk = mobins.phys_atk * 0.35
+    phys_atk = (playerins['phys_def']*0.35)-phys_atk
+    if phys_atk > 0:
+        phys_atk = 0
+    else:
+        phys_atk = round(abs(phys_atk))
+    mobdmg = mobdmg + phys_atk + mag_atk
+	return mobdmg
 			
 async def message(ctx, check, partymembers, buffs):
     while True:
@@ -1225,20 +1239,6 @@ async def explore(ctx):
         hp = round(12*level*multiplier)
         defense = round(1.2*level*multiplier)
         mobins = Mob(mob, level, atk, hp, defense, mobstats[3], mobstats[4], mobstats[5], mobstats[6], mobstats[7])
-    playerstats = playerins.stats
-    mobdmg = atk-(playerstats['defense']*0.3)
-    if mobdmg <= 0:
-        mobdmg = 1
-    mag_atk = mobins.mag_atk *0.35 - (playerstats['mag_def']*0.35)
-    if mag_atk <= 0:
-        mag_atk = 1
-    phys_atk = mobins.phys_atk * 0.35
-    phys_atk = (playerins['phys_def']*0.35)-phys_atk
-    if phys_atk > 0:
-        phys_atk = 0
-    else:
-        phys_atk = round(abs(phys_atk))
-    mobdmg = mobdmg + phys_atk + mag_atk
     if playerins.party == None:
         partymembers = None
         def check(message):
