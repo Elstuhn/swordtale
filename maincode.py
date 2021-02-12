@@ -407,39 +407,37 @@ async def returntaskmobattack(seconds, func, ctx, playerins, dmg, mob):
     tasktest = asyncio.ensure_future(taskbattle(seconds, func, ctx, playerins, dmg, mob))
     return tasktest
 
-async def calculatemobdmg(playerins, mobins):
+async def calculatemobdmg(playerins, mobins, multiplier):
 	playerstats = playerins.stats
+	atk = round(mobins.level*3*multiplier)
+	hp = round(mobins.level*12*multiplier)
+	defense = round(mobins.level*1.2*multiplier)
     mobdmg = atk-(playerstats['defense']*0.3)
     if mobdmg <= 0:
-        mobdmg = 1
+		playerdmg = round(abs(mobdmg))
+		mobdmg = 1
+	else:
+		playerdmg = 1
+		mobdmg = round(mobdmg)
     mag_atk = mobins.mag_atk *0.35 - (playerstats['mag_def']*0.35)
     if mag_atk <= 0:
+		playermag_atk = round(abs(mag_atk))
         mag_atk = 1
+	else:
+		playermag_atk = 1
+		mag_atk = round(mag_atk)
     phys_atk = mobins.phys_atk * 0.35
     phys_atk = (playerins['phys_def']*0.35)-phys_atk
-    if phys_atk > 0:
-        phys_atk = 0
+    if phys_atk <= 0:
+		playerphys_atk = round(abs(phys_atk))
+        phys_atk = 1
     else:
-        phys_atk = round(abs(phys_atk))
+        playerphys_atk = 1
+		phys_atk = round(phys_atk)
     mobdmg = mobdmg + phys_atk + mag_atk
-	return mobdmg
+	playerdmg = playerdmg + playerphys_atk + playermag_atk
+	return [mobdmg,playerdmg]
 
-async def calculateplayerdmg(playerins, mobins):
-	playerstats = playerins.stats
-    mobdmg = atk-(playerstats['defense']*0.3)
-    if mobdmg <= 0:
-        mobdmg = 1
-    mag_atk = mobins.mag_atk *0.35 - (playerstats['mag_def']*0.35)
-    if mag_atk <= 0:
-        mag_atk = 1
-    phys_atk = mobins.phys_atk * 0.35
-    phys_atk = (playerins['phys_def']*0.35)-phys_atk
-    if phys_atk > 0:
-        phys_atk = 0
-    else:
-        phys_atk = round(abs(phys_atk))
-    mobdmg = mobdmg + phys_atk + mag_atk
-	return mobdmg
 			
 async def message(ctx, check, partymembers, buffs):
     while True:
