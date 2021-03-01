@@ -1,6 +1,6 @@
 # Stuff To Do:
 
--[] Complete battle mechanisms
+- [] Complete battle mechanisms
 - Complete random mob generation through the whole map
 - Finish the constant 1 second update during the battle to update damages and buffs
 - Accomodate party fighting (only leader can initiate a fight or a dungeon battle)
