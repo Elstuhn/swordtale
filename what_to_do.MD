@@ -2,7 +2,7 @@
 
 
 
-- [] Complete battle mechanisms
+- [ ] Complete battle mechanisms
 - Complete random mob generation through the whole map
 - Finish the constant 1 second update during the battle to update damages and buffs
 - Accomodate party fighting (only leader can initiate a fight or a dungeon battle)
@@ -11,7 +11,7 @@
 
 
 
-- [] Complete assets
+- [ ] Complete assets
 - Fill up all the mobs and their parameters scattered around the map
 - Add NPCs and Locations to different parts of the map
 - Create gear with different stats
@@ -20,7 +20,7 @@
 
 
 
-- [.] Complete player interaction with NPCs and Locations
+- [ ] Complete player interaction with NPCs and Locations
 - Allow items to be added to or from player inventory (exec)
 - Make code sexier and less messy
 
@@ -30,4 +30,5 @@
 - Create command that allows modification of rank of players
 - Default rank 
 - Rank checks
+
 
