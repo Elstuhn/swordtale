@@ -1,7 +1,7 @@
 # Stuff To Do:
 
 
-
+```
 - [] Complete battle mechanisms
 - Complete random mob generation through the whole map
 - Finish the constant 1 second update during the battle to update damages and buffs
@@ -30,3 +30,4 @@
 - Create command that allows modification of rank of players
 - Default rank 
 - Rank checks
+```
