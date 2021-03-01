@@ -27,7 +27,7 @@ class Player():
         self.statsp = {'hp' : 0, 'agility' : 0, 'looting' : 0,  'atk': 0, 'defense' : 0, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0, 'cooldown_speed' : 0}
         self.stats = {'maxhp' : 20, 'hp' : 20, 'agility' : 0, 'atk': 5, 'defense' : 2, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0}
         self.class_ = None
-        self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: attack name, index 4: attack multiplier, 5: phy_atk multiplier, 6: mag_atk multiplier 7: {'buffname' : [seconds, ['buffs']]} 8: cooldown time(seconds)
+        self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: attack name, index 4: attack multiplier, 5: phy_atk multiplier, 6: mag_atk multiplier 7: {'buffname' : [seconds, {'buffs'('statname': percentage)}]} 8: cooldown time(seconds)
         self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
         self.status = "Adventurer"
 
@@ -388,15 +388,15 @@ async def monsterattack(ctx, playerins, mob):
     await ctx.send(embed=embed)
     
     
-async def battle(ctx, mob, dmg, seconds):
-    playerins = players[f'{ctx.author.id}']
-    
-    def check(message):
-        return message.author == ctx.author
-    mobattack = returntaskmobattack(seconds, monsterattack, ctx, playerins, dmg, mob)
-    mobattack = await mobattack
-    while True:
-        await client.wait_for("message", check = check, timeout = 121)
+#async def battle(ctx, mob, dmg, seconds):
+#    playerins = players[f'{ctx.author.id}']
+#    
+#    def check(message):
+#        return message.author == ctx.author
+#    mobattack = returntaskmobattack(seconds, monsterattack, ctx, playerins, dmg, mob)
+#    mobattack = await mobattack
+#    while True:
+#        await client.wait_for("message", check = check, timeout = 121)
 
 async def taskbattle(seconds, ctx, playerins, mob):
     while True:
@@ -409,7 +409,12 @@ async def taskbattle(seconds, ctx, playerins, mob):
 async def returntaskmobattack(seconds, ctx, playerins, mob):
     tasktest = asyncio.ensure_future(taskbattle(seconds, ctx, playerins, mob))
     return tasktest
-
+		    
+async def effectdmgplayer(ctx, dmg, seconds, playerins):
+	
+					
+async def effectdmgmob(ctx, dmg, seconds, mobins)
+		    
 async def calculatemobdmg(playerins, mobins, playerphy_boost, playermag_boost, mobmag_boost, mobphys_boost):
     playerstats = playerins.stats
     atk = round(mobins.level*3*mobins.multiplier)
@@ -446,7 +451,8 @@ async def calculatemobdmg(playerins, mobins, playerphy_boost, playermag_boost, m
     return [mobdmg,playerdmg]
 
 			
-async def message(ctx, check, partymembers, buffs, mobins):
+async def messageattack(ctx, check, partymembers, buffs, mobins):
+					
     while True:
         try:
             _ = await client.wait_for("message", check = check, timeout = 540)
@@ -455,16 +461,24 @@ async def message(ctx, check, partymembers, buffs, mobins):
             await ctx.send("You took too long!")
             return 0
         _ = _.content
-        playerins = players[str(ctx.author.id)]
+        #playerins = players[str(ctx.author.id)] #ctx might not be referring to the sender of the message
+		playerins = players[str(_.author.id)]
         try:
             skillinfo = playerins.skills[_]
+			skillname = skillinfo[3]
             atk = playerins.stats['atk']*skillinfo[4]
             mag_atk = skillinfo[6]
             phys_atk = skillinfo[5]
+			skillbuff = skillinfo[7]
             damages = await calculatemobdmg(playerins, mobins, phys_atk, mag_atk, 1, 1)
             dmg = damages[1]
             mobins.hp -= dmg
-            await ctx.send(f"You dealt {dmg} damage to the {mobins.name}!")
+			for i in skillbuff:
+				if i in list[buffs]:
+					continue
+				for j in skillbuff[i][1]
+				buffs[i] = [
+            await ctx.send(f"You used {skillname} and dealt {dmg} damage to the {mobins.name}!")
                 
         except:
             await ctx.send("Skill not found!")
