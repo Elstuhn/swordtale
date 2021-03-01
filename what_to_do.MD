@@ -1,7 +1,7 @@
 # Stuff To Do:
 
 
-```
+
 - [] Complete battle mechanisms
 - Complete random mob generation through the whole map
 - Finish the constant 1 second update during the battle to update damages and buffs
@@ -20,7 +20,7 @@
 
 
 
-- [] Complete player interaction with NPCs and Locations
+- [.] Complete player interaction with NPCs and Locations
 - Allow items to be added to or from player inventory (exec)
 - Make code sexier and less messy
 
@@ -30,4 +30,4 @@
 - Create command that allows modification of rank of players
 - Default rank 
 - Rank checks
-```
+
