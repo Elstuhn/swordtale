@@ -10,7 +10,8 @@
 - Reward splitting for party
 \
 \
-\\
+\
+
 - [ ] Complete assets
 - Fill up all the mobs and their parameters scattered around the map
 - Add NPCs and Locations to different parts of the map
@@ -19,13 +20,15 @@
 - Create potions and consumables
 \
 \
-\\
+\
+
 - [ ] Complete player interaction with NPCs and Locations
 - Allow items to be added to or from player inventory (exec)
 - Make code sexier and less messy
 \
 \
-\\
+\
+
 - [x] Create rank modification for players
 - Create command that allows modification of rank of players
 - Default rank 
