@@ -8,8 +8,8 @@
 - Accomodate party fighting (only leader can initiate a fight or a dungeon battle)
 - What happens if someone in the party dies and if everyone in the party dies
 - Reward splitting for party
-\
-\
+<br/>
+<br/>
 <br/>
 
 - [ ] Complete assets
@@ -18,15 +18,15 @@
 - Create gear with different stats
 - Make dungeons scattered across the map
 - Create potions and consumables
-\
-\
+<br/>
+<br/>
 <br/>
 
 - [ ] Complete player interaction with NPCs and Locations
 - Allow items to be added to or from player inventory (exec)
 - Make code sexier and less messy
-\
-\
+<br/>
+<br/>
 <br/>
 
 - [x] Create rank modification for players
