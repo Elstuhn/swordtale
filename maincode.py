@@ -29,6 +29,7 @@ class Player():
         self.class_ = None
         self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: attack name, index 4: attack multiplier, 5: phy_atk multiplier, 6: mag_atk multiplier 7: {'buffname' : [seconds, {'buffs'('statname': percentage)}]} 8: cooldown time(seconds)
         self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
+		self.fightstat = [
         self.status = "Adventurer"
 
 class Adventurers_Guild():
@@ -474,10 +475,18 @@ async def messageattack(ctx, check, partymembers, buffs, mobins):
             dmg = damages[1]
             mobins.hp -= dmg
 			for i in skillbuff:
+				addbuff = []
 				if i in list[buffs]:
 					continue
-				for j in skillbuff[i][1]
-				buffs[i] = [
+				for j in skillbuff[i][1]:
+					originalstat = playerins.stats[j]
+					playerins.stats[j] *= skillbuff[i][1][j] #multiplies player's current specific stats with the multiplier 
+					difference = playerins.stats[j] - originalstat
+					addbuff.append(f'{j}:{difference}')
+				
+				buffs[i] = addbuff + [backgroundtime, skillbuff[i][0]
+					
+					
             await ctx.send(f"You used {skillname} and dealt {dmg} damage to the {mobins.name}!")
                 
         except:
@@ -486,7 +495,7 @@ async def messageattack(ctx, check, partymembers, buffs, mobins):
         await asyncio.sleep(1)
 
 async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict):
-# buffs {"buffname" : ["effects"('statname:value(buff values would be in percentages but here itll be the numerical value of the percentage increase)statname2:value%'), backgroundtime at which it had been applied, duration]}
+# buffs {"buffname" : ["effects"('statname:value(buff values would be in percentages but here itll be the numerical value of the percentage inc/dec)statname2:value'), backgroundtime at which it had been applied, duration]}
     while True:
         if any([
             mob.hp <= 0,
