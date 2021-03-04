@@ -29,7 +29,7 @@ class Player():
         self.class_ = None
         self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: attack name, index 4: attack multiplier, 5: phy_atk multiplier, 6: mag_atk multiplier 7: {'buffname' : [seconds, {'buffs'('statname': percentage)}]} 8: cooldown time(seconds)
         self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
-		self.fightstat = [
+		self.fightstat = [None, 1] #In fight (if not, None, else, 
         self.status = "Adventurer"
 
 class Adventurers_Guild():
@@ -38,7 +38,7 @@ class Adventurers_Guild():
 class Party():
     def __init__(self, owner):
         self.owner = owner
-        self.members = [owner] #owner will be player id
+        self.members = [owner] #list will be full of player id in str
 
 class Role():
     def __init__(self, name, position, kickPerms = False, invitePerms = False, setrolePerms = False, rolecreationPerms = False, editPerms = False):
@@ -452,14 +452,20 @@ async def calculatemobdmg(playerins, mobins, playerphy_boost, playermag_boost, m
     return [mobdmg,playerdmg]
 
 			
-async def messageattack(ctx, check, partymembers, buffs, mobins):
-					
+async def messageattack(ctx, check, partymembers ,buffs, mobins): #if partymembers != None, Party instance
     while True:
+		playerins = players[str(ctx.author.id)]
         try:
             _ = await client.wait_for("message", check = check, timeout = 540)
 
         except asyncio.TimeoutError as e:
-            await ctx.send("You took too long!")
+            await ctx.send("You took too long and immediately died!")
+			if not partymembers:
+				playerins.stats['hp'] = 0
+			else:
+				for i in partymembers.members:
+					playerins = players[i]
+					playerins.stats['hp'] = 0
             return 0
         _ = _.content
         #playerins = players[str(ctx.author.id)] #ctx might not be referring to the sender of the message
@@ -500,10 +506,10 @@ async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict
         if any([
             mob.hp <= 0,
             playerins.stats['hp'] <= 0,
-            checkmessage.done()
+            messageattack.done()
             ]):
-            mobattack.cancel()
-            checkmessage.cancel()
+            monsterattack.cancel()
+            messageattack.cancel()
             break
             for i in buffs:
                 buff = buffs[i] #list
