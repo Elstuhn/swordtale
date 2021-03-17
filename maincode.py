@@ -480,17 +480,17 @@ async def messageattack(ctx, check, partymembers ,buffs, mobins): #if partymembe
             damages = await calculatemobdmg(playerins, mobins, phys_atk, mag_atk, 1, 1)
             dmg = damages[1]
             mobins.hp -= dmg
-			for i in skillbuff:
-				addbuff = []
-				if i in list[buffs]:
+			for i in skillbuff: #i = buff name
+				if i in list[buffs]: #buffs dont stack
 					continue
+				addbuff = []
 				for j in skillbuff[i][1]:
 					originalstat = playerins.stats[j]
 					playerins.stats[j] *= skillbuff[i][1][j] #multiplies player's current specific stats with the multiplier 
-					difference = playerins.stats[j] - originalstat
+					difference = playerins.stats[j] - originalstat #states the diffrence in numerical value
 					addbuff.append(f'{j}:{difference}')
 				
-				buffs[i] = addbuff + [backgroundtime, skillbuff[i][0]
+				buffs[i] = [' '.join(addbuff)] + [backgroundtime, skillbuff[i][0]]
 					
 					
             await ctx.send(f"You used {skillname} and dealt {dmg} damage to the {mobins.name}!")
