@@ -1,12 +1,13 @@
 # About
 >You are summoned into Anomopheric, a world full of lore, secrets and adventures. Form guilds, parties, friendships and bonds to conquer Anomopheric and be the best amongst all. Explore and find out new information, hidden secrets and un-found mechanisms. As an adventurer, you are thrown into the game with little to no knowledge of it at all, providing immersive exploration, information-gathering and adventuring gameplay to the adventurers. Sub-classes, forging, crafting, exploration, slaying, friendships, large interactive environments and many more.
 
-# ![The Discord (Invite Only)](https://discord.gg/2UyF3Yhh5g)
+# [Discord Test Server (Invite Only)](https://discord.gg/2UyF3Yhh5g) ![Discord Logo](https://img.17qq.com/images/cracwsucuax.jpeg)
 
 ## Classes
 **Player Class**
-```class Player():
-    def __init__(self, username, race):
+```
+	class Player():
+		def __init__(self, username, race):
         self.user = username
         self.race = race
         self.inventory = {}
@@ -25,7 +26,8 @@
         self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
 		self.fightstat = [None, 1] #In fight (if not, None, else, True) index 1 shows if dead or not (1 = alive, 0 = ded)
         self.status = "Adventurer"
-		self.advcard = None```
+		self.advcard = None
+```
  
 **Adventurer's Guild Class**
 ```class Adventurers_Guild():
@@ -36,10 +38,12 @@
 	def register(self, playerins):
 		card = Adventurers_Card(playerins.user)
 		playerins.advcard = card
-		self.members[str(playerins.author.id)] = card```
+		self.members[str(playerins.author.id)] = card
+```
     
 **Party Class**
-```class Party():
+```
+class Party():
     def __init__(self, owner):
         self.owner = owner
         self.members = [owner] #list will be full of player id in str
@@ -50,10 +54,12 @@
 			playerins = players[i]
 			if playerins.stats['hp'] >= 1:
 				out = False
-		return out```
+		return out
+```
     
 **Role Class**
-```class Role():
+```
+class Role():
     def __init__(self, name, position, kickPerms = False, invitePerms = False, setrolePerms = False, rolecreationPerms = False, editPerms = False):
         self.name = name
         self.kickPerms = kickPerms
@@ -61,20 +67,24 @@
         self.setrolePerms = setrolePerms
         self.rolecreationPerms = rolecreationPerms
         self.editPerms = editPerms
-        self.pos = position```
+        self.pos = position
+```
         
 **Guild Class**
-```class Guild():
+```
+class Guild():
     def __init__(self, name : str, owner : str):
         self.name = name
         self.owner = owner # ctx.author.id in str form
         self.value = data.chooseobj('players')[f'{owner}'].gold #set initial guild value to owner's gold amount
         self.members = {} #memberid : membername
         self.roles = {'Guild Master' : guildmaster, 'Member' : member}
-        self.rolepos = ['Guild Master', 0, 0, 0, 0, 0, 'Member']```
+        self.rolepos = ['Guild Master', 0, 0, 0, 0, 0, 'Member']
+```
         
 **Mob Class**
-```class Mob():
+```
+class Mob():
     def __init__(self, name, level, atk, hp, defense, phys_atk, phys_def, mag_atk, mag_def, cooldown_speed, multiplier): #atk, defense, hp will be calculated as constant*multiplier
         self.name = name
         self.level = level
@@ -86,10 +96,12 @@
         self.mag_atk = mag_atk
         self.mag_def = mag_def
         self.cooldown = cooldown_speed
-        self.multiplier = multiplier```
+        self.multiplier = multiplier
+```
         
 **Aventurer's Card Class**
-```class Adventurers_Card():
+```
+class Adventurers_Card():
 	def __init__(self, user):
 		self.owner = user
 		self.rank = "F"
@@ -101,7 +113,8 @@
 		return self.rank == rank
 	
 	def updaterank(self):
-		#check if requirements fulfilled```
+		#check if requirements fulfilled
+```
     
     
   
