@@ -1,7 +1,7 @@
 # About
 >You are summoned into Anomopheric, a world full of lore, secrets and adventures. Form guilds, parties, friendships and bonds to conquer Anomopheric and be the best amongst all. Explore and find out new information, hidden secrets and un-found mechanisms. As an adventurer, you are thrown into the game with little to no knowledge of it at all, providing immersive exploration, information-gathering and adventuring gameplay to the adventurers. Sub-classes, forging, crafting, exploration, slaying, friendships, large interactive environments and many more.
 
-# [Discord Test Server (Invite Only)](https://discord.gg/2UyF3Yhh5g) ![Discord Logo](https://img.17qq.com/images/cracwsucuax.jpeg)
+# [Discord Test Server (Invite Only)](https://discord.gg/2UyF3Yhh5g) ![Discord Logo](https://spng.subpng.com/20180512/vve/kisspng-discord-computer-icons-logo-computer-software-5af6ee32eff047.5576594815261322749828.jpg)
 
 ## Classes
 **Player Class**
