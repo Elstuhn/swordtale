@@ -141,8 +141,11 @@ member = Role('Member', 6)
 
         
 
-async def checkstart(ctx, game = False, private = False) -> bool:
-#return values all incidicate whether outer function can continue running or not (false = no, true=  yes)
+async def checkstart(ctx, game = False, private = False) -> bool: #could make it into a decorator
+"""
+to check if bot should reply to player's sent command or not
+if return value is false, bot doesn't reply to player else bot carries out function
+"""
     channel = ctx.channel.type
     channel = str(channel)
     name = ctx.author.name
@@ -276,6 +279,9 @@ async def gamehelp(ctx):
 
 @client.command()
 async def start(ctx):
+	"""
+	Commmand used to start playing the game
+	"""
     check = await checkstart(ctx, private = True)
     if not check:
         return
@@ -392,6 +398,9 @@ async def addstuff(playerins, *stuff):
             inventory[i] = 1
 
 async def randmob(playerins):
+	"""
+	generate a random mob based on location
+	"""
     coords = playerins.location[0]
     coords = coords.split('-')
     coord1 = int(coords[0])
@@ -415,6 +424,10 @@ async def randmob(playerins):
     return mob
     
 async def monsterattack(ctx, playerins, mob):
+	"""
+	calculates mob damage done and subtracts that from player's hp
+	sends an embed object back to show how much health each of them has left
+	"""
     damages = await calculatemobdmg(playerins, mob)
     dmg = damages[0]
     playerins.stats['hp'] -= dmg
@@ -437,7 +450,13 @@ async def monsterattack(ctx, playerins, mob):
 #    while True:
 #        await client.wait_for("message", check = check, timeout = 121)
 
-async def taskbattle(seconds, ctx, playerins, mob):
+async def taskbattle(seconds : int, ctx, playerins, mob):
+	"""
+	runs the monsterattack function which the mob damages the player and passes control for x seconds
+	where x is the number put in the seconds parameter which also represents the monster's attack cooldown
+	if player's hp is more than 0 otherwise checks if player has a party or not, if no, return 0
+	otherwise, check if all party members are dead if not, remove current player from alive list in main baattle function
+	"""
     while True:
         _ = await monsterattack(ctx, playerins, mob)
         if not playerins.stats['hp'] < 1:
@@ -449,6 +468,9 @@ async def taskbattle(seconds, ctx, playerins, mob):
 
 
 async def returntaskmobattack(seconds, ctx, playerins, mob):
+	"""
+	basically just returns taskbattle as a task using version 3.6.3 asyncio so that it can be used to run later along with other tasks
+	"""
     tasktest = asyncio.ensure_future(taskbattle(seconds, ctx, playerins, mob))
     return tasktest
 		  
@@ -457,6 +479,10 @@ async def effectdmgplayer(ctx, dmg, seconds, playerins)
 async def effectdmgmob(ctx, dmg, seconds, mobins)
 		    
 async def calculatemobdmg(playerins, mobins, playerphy_boost, playermag_boost, mobmag_boost, mobphys_boost):
+	"""
+	calculates both player and mob dmg done to each other using only their stats
+	return value is a list of mob damage done and player damage done respectively
+	"""
     playerstats = playerins.stats
     atk = round(mobins.level*3*mobins.multiplier)
     hp = round(mobins.level*12*mobins.multiplier)
@@ -493,7 +519,11 @@ async def calculatemobdmg(playerins, mobins, playerphy_boost, playermag_boost, m
 
 			
 async def messageattack(ctx, check, partymembers ,buffs, mobins): #if partymembers != None, Party instance
-	
+	"""
+	waits for player to send a message and check if its a valid move then does some calculation and subtracts that
+	from monster's health and displays in an embed object the skill used and health of both entities or if 
+	player is in a party, mob and all players' hp then add the buffs given by the used skill to the player
+	"""
     while True:
 		playerins = players[str(ctx.author.id)]
         try:
@@ -547,7 +577,11 @@ async def messageattack(ctx, check, partymembers ,buffs, mobins): #if partymembe
         await asyncio.sleep(1)
 
 async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict):
-# buffs {"buffname" : ["effects"('statname:value(buff values would be in percentages but here itll be the numerical value of the percentage inc/dec)statname2:value'), backgroundtime at which it had been applied, duration]}
+# buffs {"buffname" : ["effects"('statname:value(buff values would be in percentages but here itll be the numerical value of the percentageinc/dec)statname2:value'), backgroundtime at which it had been applied, duration]}
+	"""
+	checks every second in the background while battle is going on to see if player or mob has died and if so, cancels everything
+	to end the battle, checks also for buffs wether they have ended or not
+	"""
     if playerins.party:
 		checkdead = "playerins.stats['hp'] <= 0"
 	else:
@@ -635,6 +669,9 @@ async def create_guild(ctx, *, guildname):
 
 @client.command(aliases = ["gsetrole", "gset"])
 async def guildsetrole(ctx, member : discord.Member, *,  role):
+	"""
+	allows user to edit a specific guild-role's permissions
+	"""
     check = await checkstart(ctx, game = True)
     if not check:
         return
