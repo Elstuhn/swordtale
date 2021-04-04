@@ -6,31 +6,32 @@
 ## Classes
 **Player Class**
 ```
-	class Player():
-		def __init__(self, username, race):
-        self.user = username
-        self.race = race
-        self.inventory = {}
-        self.gear = {"weapon" : None, "secondary" : None, "helmet" : None, "chest" : None, "legs" : None, "boots" : None, "ring" : None, "amulet" : None, "special" : None}
-        self.gold = 0
-        self.level = 0
-        self.exp = 0
-        self.guild = None
-        self.guildpos = None
-        self.guildins = None
-        self.party = None    #party instance
-        self.statsp = {'hp' : 0, 'agility' : 0, 'looting' : 0,  'atk': 0, 'defense' : 0, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0, 'cooldown_speed' : 0}
-        self.stats = {'maxhp' : 20, 'hp' : 20, 'agility' : 0, 'atk': 5, 'defense' : 2, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0}
-        self.class_ = None
-        self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: attack name, index 4: attack multiplier, 5: phy_atk multiplier, 6: mag_atk multiplier 7: {'buffname' : [seconds, {'buffs'('statname': percentage)}]} 8: cooldown time(seconds)
-        self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
-		self.fightstat = [None, 1] #In fight (if not, None, else, True) index 1 shows if dead or not (1 = alive, 0 = ded)
-        self.status = "Adventurer"
-		self.advcard = None
+class Player():
+	def __init__(self, username, race):
+    self.user = username
+    self.race = race
+    self.inventory = {}
+    self.gear = {"weapon" : None, "secondary" : None, "helmet" : None, "chest" : None, "legs" : None, "boots" : None, "ring" : None, "amulet" : None, "special" : None}
+    self.gold = 0
+    self.level = 0
+    self.exp = 0
+    self.guild = None
+    self.guildpos = None
+    self.guildins = None
+    self.party = None    #party instance
+    self.statsp = {'hp' : 0, 'agility' : 0, 'looting' : 0,  'atk': 0, 'defense' : 0, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0, 'cooldown_speed' : 0}
+    self.stats = {'maxhp' : 20, 'hp' : 20, 'agility' : 0, 'atk': 5, 'defense' : 2, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0}
+    self.class_ = None
+    self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: attack name, index 4: attack multiplier, 5: phy_atk multiplier, 6: mag_atk multiplier 7: {'buffname' : [seconds, {'buffs'('statname': percentage)}]} 8: cooldown time(seconds)
+    self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
+	self.fightstat = [None, 1] #In fight (if not, None, else, True) index 1 shows if dead or not (1 = alive, 0 = ded)
+    self.status = "Adventurer"
+	self.advcard = None
 ```
  
 **Adventurer's Guild Class**
-```class Adventurers_Guild():
+```
+class Adventurers_Guild():
     def __init__(self, questlist):
 		self.questlist = questlist
 		self.members = {}
