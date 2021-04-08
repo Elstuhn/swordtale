@@ -59,7 +59,7 @@ class Party():
 				out = False
 		return out
 
-class Role():
+class Role(): #Class for guild roles
     def __init__(self, name, position, kickPerms = False, invitePerms = False, setrolePerms = False, rolecreationPerms = False, editPerms = False):
         self.name = name
         self.kickPerms = kickPerms
@@ -280,7 +280,7 @@ async def gamehelp(ctx):
 @client.command()
 async def start(ctx):
 	"""
-	Commmand used to start playing the game
+	Commmand used to start playing the game and initiate player to create profile
 	"""
     check = await checkstart(ctx, private = True)
     if not check:
@@ -390,6 +390,9 @@ async def start(ctx):
     
 #internal functions
 async def addstuff(playerins, *stuff):
+	"""
+	Accepts any amount of items as a parameter and adds it to the player's inventory
+	"""
     inventory = playerins.inventory
     for i in stuff:
         try:
@@ -1127,6 +1130,9 @@ async def tinfo(ctx):
 
 @client.command(aliases = ["tint", "interact"])
 async def tinteract(ctx, *, aim):
+	"""
+	accesses the tinteraction data storage to produce a series of options and dialogue from specified target(e.g Lighthouse, Shack, NPC) for the user 
+	"""
     check = await checkstart(ctx, game = True)
     if not check:
         return
@@ -1252,6 +1258,9 @@ async def pinvite(ctx, member : discord.Member):
 @client.command()
 @commands.cooldown(1, 25, commands.BucketType.user)
 async def move(ctx, direction):
+	"""
+	Allows user to move any direction(up, down, right, left) in the map but has a cooldown of 25 seconds 
+	"""
     check = await checkstart(ctx, game = True)
     if not check:
         return
@@ -1384,6 +1393,10 @@ async def player(ctx):
 
 @client.command()
 async def explore(ctx):
+	"""
+	This command will let the player 'explore' around the current chunk in the map they are in to find monsters to fight for exp and gold
+	It only works in chunks that are not indicated as towns (dungeons and raid areas are allowed)
+	"""
     check = await checkstart(ctx, game = True)
     if not check:
         return
@@ -1430,6 +1443,9 @@ async def explore(ctx):
 #admin commands
 @client.command()
 async def cmd(ctx, *, arg):
+	"""
+	Runs given parameters in the python SHELL through the bot
+	"""
     if str(ctx.author.id) not in admin:
         await ctx.send("Not enough permissions! Admin only.")
         return
@@ -1460,6 +1476,9 @@ async def admingold(ctx, member : discord.Member, gold : int):
         
 @client.command()
 async def systemban(ctx, member : discord.Member, *, reason):
+	"""
+	System bans someone(keeps their player class instance)
+	"""
     if str(ctx.author.id) not in admin:
             await ctx.send("Sorry! You do not have permission.")
             return
