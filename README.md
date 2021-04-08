@@ -116,6 +116,15 @@ class Adventurers_Card():
 	def updaterank(self):
 		#check if requirements fulfilled
 ```
-    
-    
+
+# Features 
+In-game Features | Admin Features 
+---------------- | --------------
+Unique Classes | Teleportation across the map
+Unique Sub-Classes | Ability to spawn gold
+Unique Class Upgrades | SystemBan
+Traversable Map | Run Commands To Shell Through Bot
+Interactable NPCs and Areas In Towns | Grant Statuses To Players
+Hidden Dungeons and Raid Areas | 
+
   
