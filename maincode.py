@@ -59,7 +59,7 @@ class Party():
 				out = False
 		return out
 
-class Role(): #Class for guild roles
+class Role():
     def __init__(self, name, position, kickPerms = False, invitePerms = False, setrolePerms = False, rolecreationPerms = False, editPerms = False):
         self.name = name
         self.kickPerms = kickPerms
@@ -111,7 +111,7 @@ from FileMonster import *
 
 fm = FileMonster()
 data = fm.load("data")
-banned = data.chooseobj("banned") # list of banned playerids
+banned = data.chooseobj("banned") # dictionary of banned playerids
 races = data.chooseobj("races")
 admin = data.chooseobj("admins") # list of admin ids
 players = data.chooseobj("players")
@@ -280,7 +280,7 @@ async def gamehelp(ctx):
 @client.command()
 async def start(ctx):
 	"""
-	Commmand used to start playing the game and initiate player to create profile
+	Commmand used to start playing the game
 	"""
     check = await checkstart(ctx, private = True)
     if not check:
@@ -390,9 +390,6 @@ async def start(ctx):
     
 #internal functions
 async def addstuff(playerins, *stuff):
-	"""
-	Accepts any amount of items as a parameter and adds it to the player's inventory
-	"""
     inventory = playerins.inventory
     for i in stuff:
         try:
@@ -458,8 +455,9 @@ async def taskbattle(seconds : int, ctx, playerins, mob):
 	runs the monsterattack function which the mob damages the player and passes control for x seconds
 	where x is the number put in the seconds parameter which also represents the monster's attack cooldown
 	if player's hp is more than 0 otherwise checks if player has a party or not, if no, return 0
-	otherwise, check if all party members are dead if not, remove current player from alive list in main baattle function
+	otherwise, check if all party members are dead if not, remove current player from alive list in main battle function
 	"""
+	alive = [players[i] for i in playerins.party.members] #makes a list of player instances from party members
     while True:
         _ = await monsterattack(ctx, playerins, mob)
         if not playerins.stats['hp'] < 1:
@@ -467,7 +465,20 @@ async def taskbattle(seconds : int, ctx, playerins, mob):
         elif not playerins.party:
 			return 0
 		else:
-			playerins.members
+			playerins.fightstat[1] = 0
+			members = playerins.party.members
+			check = False
+			for i in members:
+				member = players[i]
+				if member.fightstat[1]:
+					check = True
+					
+			if not check:
+				return 0
+			else:
+				index = alive.index(playerins)
+				del alive[index]
+				playerins = random.choice(alive)
 
 
 async def returntaskmobattack(seconds, ctx, playerins, mob):
@@ -1130,9 +1141,6 @@ async def tinfo(ctx):
 
 @client.command(aliases = ["tint", "interact"])
 async def tinteract(ctx, *, aim):
-	"""
-	accesses the tinteraction data storage to produce a series of options and dialogue from specified target(e.g Lighthouse, Shack, NPC) for the user 
-	"""
     check = await checkstart(ctx, game = True)
     if not check:
         return
@@ -1258,9 +1266,6 @@ async def pinvite(ctx, member : discord.Member):
 @client.command()
 @commands.cooldown(1, 25, commands.BucketType.user)
 async def move(ctx, direction):
-	"""
-	Allows user to move any direction(up, down, right, left) in the map but has a cooldown of 25 seconds 
-	"""
     check = await checkstart(ctx, game = True)
     if not check:
         return
@@ -1393,10 +1398,6 @@ async def player(ctx):
 
 @client.command()
 async def explore(ctx):
-	"""
-	This command will let the player 'explore' around the current chunk in the map they are in to find monsters to fight for exp and gold
-	It only works in chunks that are not indicated as towns (dungeons and raid areas are allowed)
-	"""
     check = await checkstart(ctx, game = True)
     if not check:
         return
@@ -1443,9 +1444,6 @@ async def explore(ctx):
 #admin commands
 @client.command()
 async def cmd(ctx, *, arg):
-	"""
-	Runs given parameters in the python SHELL through the bot
-	"""
     if str(ctx.author.id) not in admin:
         await ctx.send("Not enough permissions! Admin only.")
         return
@@ -1476,9 +1474,6 @@ async def admingold(ctx, member : discord.Member, gold : int):
         
 @client.command()
 async def systemban(ctx, member : discord.Member, *, reason):
-	"""
-	System bans someone(keeps their player class instance)
-	"""
     if str(ctx.author.id) not in admin:
             await ctx.send("Sorry! You do not have permission.")
             return
@@ -1502,8 +1497,12 @@ async def systemban(ctx, member : discord.Member, *, reason):
             memberins = players[i]
             memberins.party = None
         playerins.party = None
-            
-    banned.append(str(member.id))
+    
+    try:
+    	banned[str(member.id)] = players[str(member.id)]
+	except:
+		banned[str(member.id)] = None
+					
     today = datetime.now()
     banperson = ctx.author.name + ctx.author.discriminator
     banpersonid = str(ctx.author.id)
