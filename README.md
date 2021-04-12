@@ -126,5 +126,13 @@ Unique Class Upgrades | SystemBan
 Traversable Map | Run Commands To Shell Through Bot
 Interactable NPCs and Areas In Towns | Grant Statuses To Players
 Hidden Dungeons and Raid Areas | 
+Companions |
+A Myriad Of Skills |
+Ability Levels |
+Different Weapons With Different Rarities |
+Guilds and Parties |
+Party Levelling |
+Leaderboards |
+
 
   
