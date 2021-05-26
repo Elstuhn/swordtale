@@ -74,3 +74,5 @@
 - Sub classes creation 
 - Creation of more unique classes
 - Creation and requirements for upgrading classes to higher tiers
+
+- [ ] Get onboarded :D
