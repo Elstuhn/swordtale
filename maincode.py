@@ -12,7 +12,8 @@ from datetime import datetime
 from collections import defaultdict
 #calculate function so that damage values can be changed in the middle of battle 
 fileopened = {}
-class Player():
+
+class Player(): #Player Class
     def __init__(self, username, race):
         self.user = username
         self.race = race
