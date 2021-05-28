@@ -36,6 +36,10 @@ class Player(): #Player Class
 		self.advcard = None
 
 class Adventurers_Guild():
+	'''
+	Adventurer's Guild for adventurers to get quests and get gold and rewards for completing them
+	questlist has to be randomized every 12 hours as well with a limit of 8 quests
+	'''
     def __init__(self, questlist):
 		self.questlist = questlist
 		self.members = {}
@@ -44,6 +48,8 @@ class Adventurers_Guild():
 		card = Adventurers_Card(playerins.user)
 		playerins.advcard = card
 		self.members[str(playerins.author.id)] = card
+	
+	
 		
 		
 
@@ -394,7 +400,7 @@ async def addstuff(playerins, *stuff):
     inventory = playerins.inventory
     for i in stuff:
         try:
-            inventory[i] += 1
+        	inventory[i] += 1
         except:
             inventory[i] = 1
 
@@ -413,7 +419,7 @@ async def randmob(playerins):
     mobins = mob[mobchoice]
     moblevel = random.randint(mobins[0], mobins[1])
     multiplier = mobins[2]
-    atk = round(4*moblevel*multiplier)
+    atk = round(3.4*moblevel*multiplier)
     hp = round(12*moblevel*multiplier)
     defense = round(1*moblevel*multiplier)
     phys_atk = mobins[3]
@@ -451,14 +457,16 @@ async def monsterattack(ctx, playerins, mob):
 #    while True:
 #        await client.wait_for("message", check = check, timeout = 121)
 
-async def taskbattle(seconds : int, ctx, playerins, mob):
+async def taskbattle(seconds : float, ctx, playerins, mob):
 	"""
 	runs the monsterattack function which the mob damages the player and passes control for x seconds
 	where x is the number put in the seconds parameter which also represents the monster's attack cooldown
 	if player's hp is more than 0 otherwise checks if player has a party or not, if no, return 0
 	otherwise, check if all party members are dead if not, remove current player from alive list in main battle function
 	"""
-	alive = [players[i] for i in playerins.party.members] #makes a list of player instances from party members
+	if playerins.party:
+		alive = [players[i] for i in playerins.party.members] #makes a list of player instances from party members
+
     while True:
         _ = await monsterattack(ctx, playerins, mob)
         if not playerins.stats['hp'] < 1:
@@ -489,9 +497,11 @@ async def returntaskmobattack(seconds, ctx, playerins, mob):
     tasktest = asyncio.ensure_future(taskbattle(seconds, ctx, playerins, mob))
     return tasktest
 		  
-async def effectdmgplayer(ctx, dmg, seconds, playerins)
+async def effectdmgplayer(ctx, dmg, seconds, playerins):
+	pass
 					
-async def effectdmgmob(ctx, dmg, seconds, mobins)
+async def effectdmgmob(ctx, dmg, seconds, mobins):
+	pass
 		    
 async def calculatemobdmg(playerins, mobins, playerphy_boost, playermag_boost, mobmag_boost, mobphys_boost):
 	"""
@@ -539,13 +549,14 @@ async def messageattack(ctx, check, partymembers ,buffs, mobins): #if partymembe
 	from monster's health and displays in an embed object the skill used and health of both entities or if 
 	player is in a party, mob and all players' hp then add the buffs given by the used skill to the player
 	"""
+	playerins = players[str(ctx.author.id)]
     while True:
-		playerins = players[str(ctx.author.id)]
         try:
             _ = await client.wait_for("message", check = check, timeout = 540)
 
         except asyncio.TimeoutError as e:
-            await ctx.send("You took too long and immediately died!")
+            await ctx.send("You took too long thus the battle has ended you slowpoke.")
+			return 0
 			if not partymembers:
 				playerins.stats['hp'] = 0
 			else:
@@ -649,6 +660,16 @@ async def test(ctx):
 #        if _.content == "ow":
 #            await ctx.send("haha rekt")
 
+
+async def singlebattle(ctx):
+'''
+Function for letting players battle with monsters. Only works with one person.
+Anyone in a party is not allowed to battle
+'''
+	playerins = players[f'{ctx.author.id}']
+	mobins = await randmob(playerins)
+	 
+	
     
 #async def battle(playerins               
 
@@ -1408,16 +1429,6 @@ async def explore(ctx):
     if map_[location[0]][location[1]] == 't':
         await ctx.send("You cannot do this in a town!")
         return
-    elif (location[0] >2 and location[0]<6) and (location[1] >= 0 and location[1] <= 5):
-        mob = mobs[1]
-        mob = random.choice(list(mob))
-        mobstats = mobs[1][mob]
-        level = random.randint(mobstats[0], mobstats[1])
-        multiplier = mobstats[2]
-        atk = round(3*level*multiplier)
-        hp = round(12*level*multiplier)
-        defense = round(1.2*level*multiplier)
-        mobins = Mob(mob, level, atk, hp, defense, mobstats[3], mobstats[4], mobstats[5], mobstats[6], mobstats[7])
     if playerins.party == None:
         partymembers = None
         def check(message):
@@ -1426,6 +1437,7 @@ async def explore(ctx):
         partymembers = playerins.party.members
         def check(message):
             return message.author in partymembers
+	singlebattle(ctx, check)
 		    
 	#message(ctx, check, partymembers)
         
