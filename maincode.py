@@ -34,6 +34,7 @@ class Player(): #Player Class
 		self.fightstat = [None, 1] #In fight (if not, None, else, True) index 1 shows if dead or not (1 = alive, 0 = ded)
         self.status = "Adventurer"
 		self.advcard = None
+        self.quests = {}
 
 class Adventurers_Guild():
 	'''
@@ -49,7 +50,8 @@ class Adventurers_Guild():
 		playerins.advcard = card
 		self.members[str(playerins.author.id)] = card
 	
-	
+	def givequest(self, playerins):
+        
 		
 		
 
@@ -661,7 +663,7 @@ async def test(ctx):
 #            await ctx.send("haha rekt")
 
 
-async def singlebattle(ctx):
+async def singlebattle(ctx, check):
 '''
 Function for letting players battle with monsters. Only works with one person.
 Anyone in a party is not allowed to battle
@@ -1519,7 +1521,7 @@ async def systemban(ctx, member : discord.Member, *, reason):
     today = datetime.now()
     banperson = ctx.author.name + ctx.author.discriminator
     banpersonid = str(ctx.author.id)
-    today = today.strftime("%A %d %B %Y %I:%M %p %Z")
+    today = today.strftime("%A %d %B %Y %I:%M %p")
     baninfo[str(member.id)] = [reason, today, banperson, banpersonid]
 					
 					
