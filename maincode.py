@@ -459,13 +459,14 @@ async def monsterattack(ctx, playerins, mob):
 #    while True:
 #        await client.wait_for("message", check = check, timeout = 121)
 
-async def taskbattle(seconds : float, ctx, playerins, mob):
+async def taskbattle(ctx, playerins, mob):
 	"""
 	runs the monsterattack function which the mob damages the player and passes control for x seconds
 	where x is the number put in the seconds parameter which also represents the monster's attack cooldown
 	if player's hp is more than 0 otherwise checks if player has a party or not, if no, return 0
 	otherwise, check if all party members are dead if not, remove current player from alive list in main battle function
 	"""
+    seconds = mob.cooldown
 	if playerins.party:
 		alive = [players[i] for i in playerins.party.members] #makes a list of player instances from party members
 
@@ -492,11 +493,11 @@ async def taskbattle(seconds : float, ctx, playerins, mob):
 				playerins = random.choice(alive)
 
 
-async def returntaskmobattack(seconds, ctx, playerins, mob):
+async def returntaskmobattack(ctx, playerins, mob):
 	"""
 	basically just returns taskbattle as a task using version 3.6.3 asyncio so that it can be used to run later along with other tasks
 	"""
-    tasktest = asyncio.ensure_future(taskbattle(seconds, ctx, playerins, mob))
+    tasktest = asyncio.ensure_future(taskbattle(ctx, playerins, mob))
     return tasktest
 		  
 async def effectdmgplayer(ctx, dmg, seconds, playerins):
@@ -545,13 +546,14 @@ async def calculatemobdmg(playerins, mobins, playerphy_boost, playermag_boost, m
     return [mobdmg,playerdmg]
 
 			
-async def messageattack(ctx, check, partymembers ,buffs, mobins): #if partymembers != None, Party instance
+async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Party instance
 	"""
 	waits for player to send a message and check if its a valid move then does some calculation and subtracts that
 	from monster's health and displays in an embed object the skill used and health of both entities or if 
 	player is in a party, mob and all players' hp then add the buffs given by the used skill to the player
 	"""
 	playerins = players[str(ctx.author.id)]
+    partymembers = playerins.party
     while True:
         try:
             _ = await client.wait_for("message", check = check, timeout = 540)
@@ -610,7 +612,7 @@ async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict
 	checks every second in the background while battle is going on to see if player or mob has died and if so, cancels everything
 	to end the battle, checks also for buffs wether they have ended or not
 	"""
-    if playerins.party:
+    if not playerins.party:
 		checkdead = "playerins.stats['hp'] <= 0"
 	else:
 		partyins = playerins.party
@@ -670,8 +672,12 @@ Anyone in a party is not allowed to battle
 '''
 	playerins = players[f'{ctx.author.id}']
 	mobins = await randmob(playerins)
-	 
-	
+	mobdamaging = await returntaskmobattack(ctx, playerins, mobins)
+    mobdamaging = await mobdamaging
+    buffs = {}
+    checkmessage = await asyncio.ensure_future(messageattack(ctx, check, buffs, mobins))
+    secondcheck = await asyncio.ensure_future(secondcheck(ctx, mobdamaging, checkmessage, mobins, playerins, buffs))
+    
     
 #async def battle(playerins               
 
