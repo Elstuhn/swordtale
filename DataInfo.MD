@@ -52,3 +52,9 @@ Dict type. key = mobset id, value = MobSet(dict). MobSet key = mobname(string), 
 ###### guilds
 Dict type.
 Key = guildname(string), value = Guild instance
+
+###### gear
+Dict type.
+Key = gear type(string), value = Gears(dict)
+Gears key = gear name(string), value = Stats(dict)
+Stats key = statname(string), value = value(integer)

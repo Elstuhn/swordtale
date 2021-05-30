@@ -17,7 +17,7 @@ class Player(): #Player Class
     def __init__(self, username, race):
         self.user = username
         self.race = race
-        self.inventory = {}
+        self.inventory = {} #(key=class_instance, value = amount)
         self.gear = {"weapon" : None, "secondary" : None, "helmet" : None, "chest" : None, "legs" : None, "boots" : None, "ring" : None, "amulet" : None, "special" : None}
         self.gold = 0
         self.level = 0
@@ -27,7 +27,7 @@ class Player(): #Player Class
         self.guildins = None
         self.party = None    #party instance
         self.statsp = {'hp' : 0, 'agility' : 0, 'looting' : 0,  'atk': 0, 'defense' : 0, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0, 'cooldown_speed' : 0}
-        self.stats = {'maxhp' : 20, 'hp' : 20, 'agility' : 0, 'atk': 5, 'defense' : 2, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0}
+        self.stats = {'maxhp' : 20, 'hp' : 20, 'agility' : 1, 'atk': 5, 'defense' : 2, 'phys_atk' : 1, 'phys_def' : 1, 'mag_def' : 1, 'mag_atk' : 1}
         self.class_ = None
         self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: attack name, index 4: attack multiplier, 5: phy_atk multiplier, 6: mag_atk multiplier 7: {'buffname' : [seconds, {'buffs'('statname': percentage)}]} 8: cooldown time(seconds)
         self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
@@ -116,6 +116,37 @@ class Adventurers_Card():
 	def updaterank(self):
 		#check if requirements fulfilled
 
+class Gear():
+    def __init__(self, name : str, lore : str = "Nothing to see here", type_ : str, hp : int = 0, atk : int = 0, defense : int = 0, agility : int = 0, phys_atk : int = 0, phys_def : int = 0, mag_atk : int = 0, mag_def : int = 0):
+        self.name = name
+        self.lore = lore
+        self.type_ = type_
+        self.hp = hp
+        self.atk = atk
+        self.defense = defense
+        self.agility = agility
+        self.phyatk = phys_atk
+        self.phydef = phys_def
+        self.magatk = mag_atk
+        self.magdef = mag_def
+        
+class Item():
+    def __init__(self, name, lore):
+        self.name = name
+        self.lore = lore
+
+class Consumable():
+    def __init__(self, name, lore, atk, defense, agility, phys_atk, phys_def, mag_atk, mag_def):
+        self.name = name
+        self.lore = lore
+        self.atk = atk
+        self.defense = defense
+        self.agility = agility
+        self.physatk = phys_atk
+        self.physdef = phys_def
+        self.magatk = mag_atk
+        self.magdef = mag_def
+
 from FileMonster import *
 
 fm = FileMonster()
@@ -134,6 +165,7 @@ levels = data.chooseobj("levels")
 locationinfo = data.chooseobj("locationinfo") # dict {'coords' : discord.Embed}
 mobs = data.chooseobj("mobs") #{1 : {mob : [minlevel, maxlevel, multiplier, phys_atk, mag_atk, phys_def, mag_def, cooldown]}}
 guilds = data.chooseobj("guilds") # dict {'guildname' : guild instance}
+gear = data.chooseobj("gear")
 
 #setup begin
 with open('token', 'rb') as readfile:
@@ -398,7 +430,16 @@ async def start(ctx):
 
     
 #internal functions
-async def addstuff(playerins, *stuff):
+async def rewards(playerins, mobins):
+    '''
+    A function to give players rewards(exp, gold, items)
+    when they win a battle
+    '''
+    expgain = round(3.5*mobins.level)
+    goldgain = round(4.2*mobins.level)
+    
+
+async def addstuff(playerins, stuff : list):
     inventory = playerins.inventory
     for i in stuff:
         try:
@@ -423,11 +464,11 @@ async def randmob(playerins):
     multiplier = mobins[2]
     atk = round(3.4*moblevel*multiplier)
     hp = round(12*moblevel*multiplier)
-    defense = round(1*moblevel*multiplier)
-    phys_atk = mobins[3]
-    phys_def = mobins[4]
-    mag_atk = mobins[5]
-    mag_def = mobins[6]
+    defense = round(1.1*moblevel*multiplier)
+    phys_atk = round(mobins[3]*moblevel)
+    phys_def = round(mobins[4]*moblevel)
+    mag_atk = round(mobins[5]*moblevel)
+    mag_def = round(mobins[6]*moblevel)
     cooldown = mobins[7]
     mob = Mob(moblevel, atk, hp, defense, phys_atk, phys_def, mag_atk, mag_def, cooldown)
     return mob
@@ -511,39 +552,31 @@ async def calculatemobdmg(playerins, mobins, playerphy_boost, playermag_boost, m
 	calculates both player and mob dmg done to each other using only their stats
 	return value is a list of mob damage done and player damage done respectively
 	"""
+    def default(value : float) -> int:
+        if value <= 0:
+            return 1
+        else:
+            return round(value)
     playerstats = playerins.stats
-    atk = round(mobins.level*3*mobins.multiplier)
-    hp = round(mobins.level*12*mobins.multiplier)
-    defense = round(mobins.level*1.2*mobins.multiplier)
-    mobdmg = atk-(playerstats['defense']*0.3)
-    if mobdmg <= 0:
-        playerdmg = round(abs(mobdmg))
-        mobdmg = 1
-    else:
-        playerdmg = 1
-        mobdmg = round(mobdmg)
-    mag_atk = mobins.mag_atk *0.35 - (playerstats['mag_def']*0.35)
-    if mag_atk <= 0:
-        playermag_atk = round(abs(mag_atk))
-        mag_atk = 1
-    else:
-        playermag_atk = 1
-        mag_atk = round(mag_atk)
-    phys_atk = mobins.phys_atk * 0.35
-    phys_atk = (playerins['phys_def']*0.35)-phys_atk
-    if phys_atk <= 0:
-        playerphys_atk = round(abs(phys_atk))
-        phys_atk = 1
-    else:
-        playerphys_atk = 1
-        phys_atk = round(phys_atk)
+    playergear = playerins.gear
+    playerweapon = playergear['weapon']
+    if not playerweapon:
+        playerweapon = Gear("Fist", "Fist your dad", None)
+        
+    playerOriginalDmg = (playerstats['atk'] * playerweapon.atk) + default(playerweapon.physatk * playerstats['phys_atk'] - mobins.phys_def * mobins.level) + default(playerweapon.magatk * playerstats['mag_atk']- mobins.mag_def*mobins.level)
+    playerTrueDmg = playerOriginalDmg - mobins.defense
+    
+
+    mobOriginalDmg = mobins.atk + default(mobins.phys_atk - playerstats['phys_def']) + default(mobins.mag_atk - playerstats['mag_def'])
+    mobTrueDmg = mobOriginalDmg - playerstats['defense']
+
     playerphys_atk *= playerphy_boost
     playermag_atk *= playermag_boost
     phys_atk *= mobphys_boost
     mag_atk *= mobmag_boost
     mobdmg = mobdmg + phys_atk + mag_atk
     playerdmg = playerdmg + playerphys_atk + playermag_atk
-    return [mobdmg,playerdmg]
+    return [mobdmg, playerTrueDmg]
 
 			
 async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Party instance
@@ -677,7 +710,10 @@ Anyone in a party is not allowed to battle
     buffs = {}
     checkmessage = await asyncio.ensure_future(messageattack(ctx, check, buffs, mobins))
     secondcheck = await asyncio.ensure_future(secondcheck(ctx, mobdamaging, checkmessage, mobins, playerins, buffs))
-    
+    if playerins.stats['hp'] <= 0:
+        await ctx.send("Haha u lost noob idiot")
+    else:
+        await ctx.send("u won the battle!")
     
 #async def battle(playerins               
 
@@ -1128,7 +1164,7 @@ async def showinv(ctx):
     inv = playerins.inventory
     embed = discord.Embed(title = f"{playerins.user}'s Inventory :school_satchel:")
     for count, item in enumerate(inv):
-        embed.add_field(name = f"Slot {count}", value = f"{item}  x{inv[item]}", inline=False)
+        embed.add_field(name = f"Slot {count}", value = f"{item.name}  x{inv[item]}", inline=False)
     await ctx.send(embed=embed)
     
 
