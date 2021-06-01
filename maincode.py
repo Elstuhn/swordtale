@@ -1605,4 +1605,30 @@ async def grant(ctx, member : discord.Member, *, status):
     memberins = players[f'{member.id}']
     memberins.status = status
     await ctx.send(f"Player '{memberins.user}' was conferred the role of '{status}'")
+
+@client.command()
+async def reload(ctx):
+    if str(ctx.author.id) not in admin:
+        await ctx.send("Sorry! You do not have permission to do this.")
+        return
+    fm.save(data)
+    open('data.FM', 'wb').close()
+    data = fm.load("data")
+    banned = data.chooseobj("banned") # dictionary of banned playerids
+    races = data.chooseobj("races")
+    admin = data.chooseobj("admins") # list of admin ids
+    players = data.chooseobj("players")
+    tinteraction = data.chooseobj("tinteraction") # dict {'coords' : {'npc or locations' : {discord.Embed, 'paths'}}
+    playerlist = list(players)
+    map_ = data.chooseobj("map") # nested list
+    baninfo = data.chooseobj("baninfo") #dict {'playerid' : [banreason, date of ban, banned by who]}
+    places = data.chooseobj("places")
+    skills = data.chooseobj("skills")
+    levels = data.chooseobj("levels")
+    locationinfo = data.chooseobj("locationinfo") # dict {'coords' : discord.Embed}
+    mobs = data.chooseobj("mobs") #{1 : {mob : [minlevel, maxlevel, multiplier, phys_atk, mag_atk, phys_def, mag_def, cooldown]}}
+    guilds = data.chooseobj("guilds") # dict {'guildname' : guild instance}
+    gear = data.chooseobj("gear")   
+
+
 client.run(TOKEN)
