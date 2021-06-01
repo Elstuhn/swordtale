@@ -30,8 +30,7 @@ class Player(): #Player Class
         self.guildpos = None
         self.guildins = None
         self.party = None    #party instance
-        self.statsp = {'hp' : 0, 'agility' : 0, 'looting' : 0,  'atk': 0, 'defense' : 0, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0, 'cooldown_speed' : 0}
-        self.stats = {'maxhp' : 20, 'hp' : 20, 'agility' : 1, 'atk': 5, 'defense' : 2, 'phys_atk' : 1, 'phys_def' : 1, 'mag_def' : 1, 'mag_atk' : 1}
+        self.stats = {'maxhp' : 20, 'hp' : 20, 'agility' : 1, 'atk': 5, 'defense' : 2, 'phys_atk' : 1, 'phys_def' : 1, 'mag_def' : 1, 'mag_atk' : 1, 'looting' : 0, 'cooldown_speed' : 0}
         self.class_ = None
         self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: skill name, 4: phy_atk multiplier, 5: mag_atk multiplier 6: {'buffname' : [seconds, {'buffs'('statname': percentage)}]} 7: cooldown time(seconds)
         self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
@@ -431,7 +430,7 @@ async def start(ctx):
     await ctx.send(embed = embed)
     racestat = races[playerrace]
     for stat in racestat:
-        playerins.statsp[stat] += racestat[stat]
+        playerins.stats[stat] += racestat[stat]
 
     
 #internal functions
@@ -475,10 +474,10 @@ async def randmob(playerins):
     return mob
     
 async def monsterattack(ctx, playerins, mob):
-	"""
-	calculates mob damage done and subtracts that from player's hp
-	sends an embed object back to show how much health each of them has left
-	"""
+    """
+    calculates mob damage done and subtracts that from player's hp
+    sends an embed object back to show how much health each of them has left
+    """
     dmg = calcmobdmg(playerins, mob)
     playerins.stats['hp'] -= dmg
     embed = discord.Embed(title =f"**{playerins.user}'s __Battle Status__**", description = f"{mob} has attacked you for {dmg} damage!")
@@ -545,8 +544,8 @@ async def effectdmgplayer(ctx, dmg, seconds, playerins):
     pass
                     
 async def effectdmgmob(ctx, dmg, seconds, mobins):
-	pass
-		    
+    pass
+            
 
 async def gearvalues(playerins) -> dict:
     '''
@@ -603,7 +602,7 @@ async def calcmobdmg(playerins, mobins):
     mobTrueDmg = mobOriginalDmg - playerstats['defense']
     return mobTrueDmg
         
-			
+            
 async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Party instance
     """
     waits for player to send a message and check if its a valid move then does some calculation and subtracts that
@@ -635,7 +634,7 @@ async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Pa
             atk = playerins.stats['atk']*skillinfo[4]
             mag_atk = skillinfo[5]
             phys_atk = skillinfo[4]
-			skillbuff = skillinfo[6]
+            skillbuff = skillinfo[6]
             dmg = calcplayerdmg(playerins, mobins, phys_atk, mag_atk)
             mobins.hp -= dmg
             for i in skillbuff: #i = buff name
@@ -697,8 +696,7 @@ async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict
                         exec(f'playerins.stats[{buffname}] -= {buffvalue}')
                     del buffs[i]
         await asyncio.sleep(1)
-    
-    
+
 @client.command()
 async def test(ctx):
     def check(message):
@@ -1417,7 +1415,7 @@ async def stats(ctx):
     if not check:
         return
     player = players[str(ctx.author.id)]
-    playerstats = player.statsp
+    playerstats = player.stats
     embed = discord.Embed(title = f"**__{player.user}'s Stats__**")
     embed.add_field(name = "\u200b", value = "\u200b")
     embed.add_field(name = "**__Percentages__**", value = "\u200b")
