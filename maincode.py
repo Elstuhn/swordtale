@@ -12,12 +12,16 @@ from datetime import datetime
 from collections import defaultdict
 #calculate function so that damage values can be changed in the middle of battle 
 fileopened = {}
-
+''''
+Things to note:
+-For skills, dont make boosts too high
+-For mobs, dont make stats too high (physatk, phys_def, magatk, magdef)
+'''
 class Player(): #Player Class
     def __init__(self, username, race):
         self.user = username
         self.race = race
-        self.inventory = {} #(key=class_instance, value = amount)
+        self.inventory = defaultdict(int) #(key=class_instance, value = amount)
         self.gear = {"weapon" : None, "secondary" : None, "helmet" : None, "chest" : None, "legs" : None, "boots" : None, "ring" : None, "amulet" : None, "special" : None}
         self.gold = 0
         self.level = 0
@@ -29,7 +33,7 @@ class Player(): #Player Class
         self.statsp = {'hp' : 0, 'agility' : 0, 'looting' : 0,  'atk': 0, 'defense' : 0, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0, 'cooldown_speed' : 0}
         self.stats = {'maxhp' : 20, 'hp' : 20, 'agility' : 1, 'atk': 5, 'defense' : 2, 'phys_atk' : 1, 'phys_def' : 1, 'mag_def' : 1, 'mag_atk' : 1}
         self.class_ = None
-        self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: attack name, index 4: attack multiplier, 5: phy_atk multiplier, 6: mag_atk multiplier 7: {'buffname' : [seconds, {'buffs'('statname': percentage)}]} 8: cooldown time(seconds)
+        self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: skill name, 4: phy_atk multiplier, 5: mag_atk multiplier 6: {'buffname' : [seconds, {'buffs'('statname': percentage)}]} 7: cooldown time(seconds)
         self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
         self.fightstat = [None, 1] #In fight (if not, None, else, True) index 1 shows if dead or not (1 = alive, 0 = ded)
         self.status = "Adventurer"
@@ -118,7 +122,7 @@ class Adventurers_Card():
         pass 
 
 class Gear():
-    def __init__(self, name : str, lore : str = "Nothing to see here", type_ : str, hp : int = 0, atk : int = 0, defense : int = 0, agility : int = 0, phys_atk : int = 0, phys_def : int = 0, mag_atk : int = 0, mag_def : int = 0): # BUG: What Is Going On Here?
+    def __init__(self, name : str, lore : str, type_ : str, hp : int = 0, atk : int = 0, defense : int = 0, agility : int = 0, phys_atk : int = 0, phys_def : int = 0, mag_atk : int = 0, mag_def : int = 0):
         self.name = name
         self.lore = lore
         self.type_ = type_
@@ -441,12 +445,8 @@ async def rewards(playerins, mobins):
     
 
 async def addstuff(playerins, stuff : list):
-    inventory = playerins.inventory
     for i in stuff:
-        try:
-            inventory[i] += 1
-        except:
-            inventory[i] = 1
+        playerins.inventory[i] += 1
 
 async def randmob(playerins):
     """
@@ -464,8 +464,8 @@ async def randmob(playerins):
     moblevel = random.randint(mobins[0], mobins[1])
     multiplier = mobins[2]
     atk = round(3.4*moblevel*multiplier)
-    hp = round(12*moblevel*multiplier)
-    defense = round(1.1*moblevel*multiplier)
+    hp = round(15*moblevel*multiplier)
+    defense = round(1.2*moblevel*multiplier)
     phys_atk = round(mobins[3]*moblevel)
     phys_def = round(mobins[4]*moblevel)
     mag_atk = round(mobins[5]*moblevel)
@@ -475,12 +475,11 @@ async def randmob(playerins):
     return mob
     
 async def monsterattack(ctx, playerins, mob):
-    """
-    calculates mob damage done and subtracts that from player's hp
-    sends an embed object back to show how much health each of them has left
-    """
-    damages = await calculatemobdmg(playerins, mob)
-    dmg = damages[0]
+	"""
+	calculates mob damage done and subtracts that from player's hp
+	sends an embed object back to show how much health each of them has left
+	"""
+    dmg = calcmobdmg(playerins, mob)
     playerins.stats['hp'] -= dmg
     embed = discord.Embed(title =f"**{playerins.user}'s __Battle Status__**", description = f"{mob} has attacked you for {dmg} damage!")
     embed.add_field(name = f"**__{mob.name}__**", value = "\u200b", inline=False)
@@ -546,40 +545,65 @@ async def effectdmgplayer(ctx, dmg, seconds, playerins):
     pass
                     
 async def effectdmgmob(ctx, dmg, seconds, mobins):
-    pass
-            
-async def calculatemobdmg(playerins, mobins, playerphy_boost, playermag_boost, mobmag_boost, mobphys_boost):
-    """
-    calculates both player and mob dmg done to each other using only their stats
-    return value is a list of mob damage done and player damage done respectively
-    """
+	pass
+		    
+
+async def gearvalues(playerins) -> dict:
+    '''
+    calculates and returns a dictionary stating
+    the total magic defense, physical attack, magic attack, physical defense
+    values of the player's current equipped gear
+    '''
+    playergear = playerins.gear
+    totalphyatk = totalmagdef = totalphydef = totalmagatk = 0
+    
+    for i in playergear:
+        gear = playergear[i]
+        totalphyatk += gear.phyatk
+        totalmagdef += gear.magdef
+        totalmagatk += gear.magatk
+        totalphydef += gear.phydef
+    
+    return {'phyatk' : totalphyatk,
+            'phydef' : totalphydef,
+            'magatk' : totalmagatk,
+            'magdef' : totalmagdef}
+
+
+async def calcplayerdmg(playerins , mobins, skillphyatk, skillmagatk):
+    '''
+    calculates teh true damage a player does
+    '''
     def default(value : float) -> int:
         if value <= 0:
             return 1
         else:
             return round(value)
     playerstats = playerins.stats
-    playergear = playerins.gear
-    playerweapon = playergear['weapon']
-    if not playerweapon:
-        playerweapon = Gear("Fist", "Fist your dad", None)
-        
-    playerOriginalDmg = (playerstats['atk'] * playerweapon.atk) + default(playerweapon.physatk * playerstats['phys_atk'] - mobins.phys_def * mobins.level) + default(playerweapon.magatk * playerstats['mag_atk']- mobins.mag_def*mobins.level)
-    playerTrueDmg = playerOriginalDmg - mobins.defense
-    
+    gearvalues = await gearvalues(playerins)
+    playerphyatk = gearvalues['phyatk']
+    playermagatk = gearvalues['magatk']
+    playerOriginalDmg = (playerstats['atk'] * playerweapon.atk) + default(playerphyatk * skillphyatk * playerstats['phys_atk'] - mobins.phys_def * mobins.level) + default(playermagatk * skillmagatk * playerstats['mag_atk']- mobins.mag_def*mobins.level)
+    playerTrueDmg = playerOriginalDmg - mobins.defense   
+    return playerTrueDmg
 
-    mobOriginalDmg = mobins.atk + default(mobins.phys_atk - playerstats['phys_def']) + default(mobins.mag_atk - playerstats['mag_def'])
+async def calcmobdmg(playerins, mobins):
+    '''
+    calculates the true damage a mob does
+    '''
+    def default(value : float) -> int:
+        if value <= 0:
+            return 1
+        else:
+            return round(value)
+    gearvalues = await gearvalues(playerins)
+    gearphydef = gearvalues['phydef']
+    gearmagdef = gearvalues['magdef']
+    mobOriginalDmg = mobins.atk + default(mobins.phys_atk - playerstats['phys_def'] * gearphydef) + default(mobins.mag_atk - playerstats['mag_def'] * gearmagdef)
     mobTrueDmg = mobOriginalDmg - playerstats['defense']
-
-    playerphys_atk *= playerphy_boost
-    playermag_atk *= playermag_boost
-    phys_atk *= mobphys_boost
-    mag_atk *= mobmag_boost
-    mobdmg = mobdmg + phys_atk + mag_atk
-    playerdmg = playerdmg + playerphys_atk + playermag_atk
-    return [mobdmg, playerTrueDmg]
-
-            
+    return mobTrueDmg
+        
+			
 async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Party instance
     """
     waits for player to send a message and check if its a valid move then does some calculation and subtracts that
@@ -609,11 +633,10 @@ async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Pa
             skillinfo = playerins.skills[_]
             skillname = skillinfo[3]
             atk = playerins.stats['atk']*skillinfo[4]
-            mag_atk = skillinfo[6]
-            phys_atk = skillinfo[5]
-            skillbuff = skillinfo[7]
-            damages = await calculatemobdmg(playerins, mobins, phys_atk, mag_atk, 1, 1)
-            dmg = damages[1]
+            mag_atk = skillinfo[5]
+            phys_atk = skillinfo[4]
+			skillbuff = skillinfo[6]
+            dmg = calcplayerdmg(playerins, mobins, phys_atk, mag_atk)
             mobins.hp -= dmg
             for i in skillbuff: #i = buff name
                 if i in list[buffs]: #buffs dont stack
