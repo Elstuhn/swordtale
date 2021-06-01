@@ -31,42 +31,42 @@ class Player(): #Player Class
         self.class_ = None
         self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: attack name, index 4: attack multiplier, 5: phy_atk multiplier, 6: mag_atk multiplier 7: {'buffname' : [seconds, {'buffs'('statname': percentage)}]} 8: cooldown time(seconds)
         self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
-		self.fightstat = [None, 1] #In fight (if not, None, else, True) index 1 shows if dead or not (1 = alive, 0 = ded)
+        self.fightstat = [None, 1] #In fight (if not, None, else, True) index 1 shows if dead or not (1 = alive, 0 = ded)
         self.status = "Adventurer"
-		self.advcard = None
+        self.advcard = None
         self.quests = {}
 
 class Adventurers_Guild():
-	'''
-	Adventurer's Guild for adventurers to get quests and get gold and rewards for completing them
-	questlist has to be randomized every 12 hours as well with a limit of 8 quests
-	'''
+    '''
+    Adventurer's Guild for adventurers to get quests and get gold and rewards for completing them
+    questlist has to be randomized every 12 hours as well with a limit of 8 quests
+    '''
     def __init__(self, questlist):
-		self.questlist = questlist
-		self.members = {}
-		
-	def register(self, playerins):
-		card = Adventurers_Card(playerins.user)
-		playerins.advcard = card
-		self.members[str(playerins.author.id)] = card
-	
-	def givequest(self, playerins):
+        self.questlist = questlist
+        self.members = {}
         
-		
-		
+    def register(self, playerins):
+        card = Adventurers_Card(playerins.user)
+        playerins.advcard = card
+        self.members[str(playerins.author.id)] = card
+    
+    def givequest(self, playerins):
+        ## MARK: - TODO
+        pass
+
 
 class Party():
     def __init__(self, owner):
         self.owner = owner
         self.members = [owner] #list will be full of player id in str
-		
-	def checkdead(self):
-		out = True #if out is false at the end, not all dead
-		for i in self.members:
-			playerins = players[i]
-			if playerins.stats['hp'] >= 1:
-				out = False
-		return out
+        
+    def checkdead(self):
+        out = True #if out is false at the end, not all dead
+        for i in self.members:
+            playerins = players[i]
+            if playerins.stats['hp'] >= 1:
+                out = False
+        return out
 
 class Role():
     def __init__(self, name, position, kickPerms = False, invitePerms = False, setrolePerms = False, rolecreationPerms = False, editPerms = False):
@@ -101,23 +101,24 @@ class Mob():
         self.cooldown = cooldown_speed
         self.multiplier = multiplier
 
-				 
+                 
 class Adventurers_Card():
-	def __init__(self, user):
-		self.owner = user
-		self.rank = "F"
-		self.quests = {}
-		self.questcount = 0
-		self.title = None
-	
-	def check_rank(self, rank):
-		return self.rank == rank
-	
-	def updaterank(self):
-		#check if requirements fulfilled
+    def __init__(self, user):
+        self.owner = user
+        self.rank = "F"
+        self.quests = {}
+        self.questcount = 0
+        self.title = None
+    
+    def check_rank(self, rank):
+        return self.rank == rank
+    
+    def updaterank(self):
+        #check if requirements fulfilled: TODO
+        pass 
 
 class Gear():
-    def __init__(self, name : str, lore : str = "Nothing to see here", type_ : str, hp : int = 0, atk : int = 0, defense : int = 0, agility : int = 0, phys_atk : int = 0, phys_def : int = 0, mag_atk : int = 0, mag_def : int = 0):
+    def __init__(self, name : str, lore : str = "Nothing to see here", type_ : str, hp : int = 0, atk : int = 0, defense : int = 0, agility : int = 0, phys_atk : int = 0, phys_def : int = 0, mag_atk : int = 0, mag_def : int = 0): # BUG: What Is Going On Here?
         self.name = name
         self.lore = lore
         self.type_ = type_
@@ -183,10 +184,10 @@ member = Role('Member', 6)
         
 
 async def checkstart(ctx, game = False, private = False) -> bool: #could make it into a decorator
-"""
-to check if bot should reply to player's sent command or not
-if return value is false, bot doesn't reply to player else bot carries out function
-"""
+    """
+    to check if bot should reply to player's sent command or not
+    if return value is false, bot doesn't reply to player else bot carries out function
+    """
     channel = ctx.channel.type
     channel = str(channel)
     name = ctx.author.name
@@ -202,11 +203,11 @@ if return value is false, bot doesn't reply to player else bot carries out funct
     elif str(ctx.author.id) not in players:
         await ctx.send("You haven't started your adventure yet! Start it with `,start`")
         return False
-	
-	elif players[str(ctx.author.id)].fightstat[0]:
-		await ctx.send("You are currently in a fight! Focus on it!")
-		return False
-	
+    
+    elif players[str(ctx.author.id)].fightstat[0]:
+        await ctx.send("You are currently in a fight! Focus on it!")
+        return False
+    
     else:
         return True
 
@@ -320,9 +321,9 @@ async def gamehelp(ctx):
 
 @client.command()
 async def start(ctx):
-	"""
-	Commmand used to start playing the game
-	"""
+    """
+    Commmand used to start playing the game
+    """
     check = await checkstart(ctx, private = True)
     if not check:
         return
@@ -443,14 +444,14 @@ async def addstuff(playerins, stuff : list):
     inventory = playerins.inventory
     for i in stuff:
         try:
-        	inventory[i] += 1
+            inventory[i] += 1
         except:
             inventory[i] = 1
 
 async def randmob(playerins):
-	"""
-	generate a random mob based on location
-	"""
+    """
+    generate a random mob based on location
+    """
     coords = playerins.location[0]
     coords = coords.split('-')
     coord1 = int(coords[0])
@@ -474,10 +475,10 @@ async def randmob(playerins):
     return mob
     
 async def monsterattack(ctx, playerins, mob):
-	"""
-	calculates mob damage done and subtracts that from player's hp
-	sends an embed object back to show how much health each of them has left
-	"""
+    """
+    calculates mob damage done and subtracts that from player's hp
+    sends an embed object back to show how much health each of them has left
+    """
     damages = await calculatemobdmg(playerins, mob)
     dmg = damages[0]
     playerins.stats['hp'] -= dmg
@@ -501,57 +502,57 @@ async def monsterattack(ctx, playerins, mob):
 #        await client.wait_for("message", check = check, timeout = 121)
 
 async def taskbattle(ctx, playerins, mob):
-	"""
-	runs the monsterattack function which the mob damages the player and passes control for x seconds
-	where x is the number put in the seconds parameter which also represents the monster's attack cooldown
-	if player's hp is more than 0 otherwise checks if player has a party or not, if no, return 0
-	otherwise, check if all party members are dead if not, remove current player from alive list in main battle function
-	"""
+    """
+    runs the monsterattack function which the mob damages the player and passes control for x seconds
+    where x is the number put in the seconds parameter which also represents the monster's attack cooldown
+    if player's hp is more than 0 otherwise checks if player has a party or not, if no, return 0
+    otherwise, check if all party members are dead if not, remove current player from alive list in main battle function
+    """
     seconds = mob.cooldown
-	if playerins.party:
-		alive = [players[i] for i in playerins.party.members] #makes a list of player instances from party members
+    if playerins.party:
+        alive = [players[i] for i in playerins.party.members] #makes a list of player instances from party members
 
     while True:
         _ = await monsterattack(ctx, playerins, mob)
         if not playerins.stats['hp'] < 1:
             await asyncio.sleep(seconds)
         elif not playerins.party:
-			return 0
-		else:
-			playerins.fightstat[1] = 0
-			members = playerins.party.members
-			check = False
-			for i in members:
-				member = players[i]
-				if member.fightstat[1]:
-					check = True
-					
-			if not check:
-				return 0
-			else:
-				index = alive.index(playerins)
-				del alive[index]
-				playerins = random.choice(alive)
+            return 0
+        else:
+            playerins.fightstat[1] = 0
+            members = playerins.party.members
+            check = False
+            for i in members:
+                member = players[i]
+                if member.fightstat[1]:
+                    check = True
+                    
+            if not check:
+                return 0
+            else:
+                index = alive.index(playerins)
+                del alive[index]
+                playerins = random.choice(alive)
 
 
 async def returntaskmobattack(ctx, playerins, mob):
-	"""
-	basically just returns taskbattle as a task using version 3.6.3 asyncio so that it can be used to run later along with other tasks
-	"""
+    """
+    basically just returns taskbattle as a task using version 3.6.3 asyncio so that it can be used to run later along with other tasks
+    """
     tasktest = asyncio.ensure_future(taskbattle(ctx, playerins, mob))
     return tasktest
-		  
+          
 async def effectdmgplayer(ctx, dmg, seconds, playerins):
-	pass
-					
+    pass
+                    
 async def effectdmgmob(ctx, dmg, seconds, mobins):
-	pass
-		    
+    pass
+            
 async def calculatemobdmg(playerins, mobins, playerphy_boost, playermag_boost, mobmag_boost, mobphys_boost):
-	"""
-	calculates both player and mob dmg done to each other using only their stats
-	return value is a list of mob damage done and player damage done respectively
-	"""
+    """
+    calculates both player and mob dmg done to each other using only their stats
+    return value is a list of mob damage done and player damage done respectively
+    """
     def default(value : float) -> int:
         if value <= 0:
             return 1
@@ -578,14 +579,14 @@ async def calculatemobdmg(playerins, mobins, playerphy_boost, playermag_boost, m
     playerdmg = playerdmg + playerphys_atk + playermag_atk
     return [mobdmg, playerTrueDmg]
 
-			
+            
 async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Party instance
-	"""
-	waits for player to send a message and check if its a valid move then does some calculation and subtracts that
-	from monster's health and displays in an embed object the skill used and health of both entities or if 
-	player is in a party, mob and all players' hp then add the buffs given by the used skill to the player
-	"""
-	playerins = players[str(ctx.author.id)]
+    """
+    waits for player to send a message and check if its a valid move then does some calculation and subtracts that
+    from monster's health and displays in an embed object the skill used and health of both entities or if 
+    player is in a party, mob and all players' hp then add the buffs given by the used skill to the player
+    """
+    playerins = players[str(ctx.author.id)]
     partymembers = playerins.party
     while True:
         try:
@@ -593,46 +594,46 @@ async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Pa
 
         except asyncio.TimeoutError as e:
             await ctx.send("You took too long thus the battle has ended you slowpoke.")
-			return 0
-			if not partymembers:
-				playerins.stats['hp'] = 0
-			else:
-				for i in partymembers.members:
-					playerins = players[i]
-					playerins.stats['hp'] = 0
+            return 0
+            if not partymembers:
+                playerins.stats['hp'] = 0
+            else:
+                for i in partymembers.members:
+                    playerins = players[i]
+                    playerins.stats['hp'] = 0
             return 0
         _ = _.content
         #ctx might not be referring to the sender of the message
-		playerins = players[str(_.author.id)]
+        playerins = players[str(_.author.id)]
         try:
             skillinfo = playerins.skills[_]
-			skillname = skillinfo[3]
+            skillname = skillinfo[3]
             atk = playerins.stats['atk']*skillinfo[4]
             mag_atk = skillinfo[6]
             phys_atk = skillinfo[5]
-			skillbuff = skillinfo[7]
+            skillbuff = skillinfo[7]
             damages = await calculatemobdmg(playerins, mobins, phys_atk, mag_atk, 1, 1)
             dmg = damages[1]
             mobins.hp -= dmg
-			for i in skillbuff: #i = buff name
-				if i in list[buffs]: #buffs dont stack
-					continue
-				addbuff = []
-				for j in skillbuff[i][1]:
-					originalstat = playerins.stats[j]
-					playerins.stats[j] *= skillbuff[i][1][j] #multiplies player's current specific stats with the multiplier 
-					difference = playerins.stats[j] - originalstat #states the diffrence in numerical value
-					addbuff.append(f'{j}:{difference}')
-				
-				buffs[i] = [' '.join(addbuff)] + [backgroundtime, skillbuff[i][0]]
-				
-					
-			embed = discord.Embed(title =f"**{playerins.user}'s __Battle Status__**", description = f"You used {skillname} to deal {dmg} damage to the monster!")
-    		embed.add_field(name = f"**__{mob.name}__**", value = "\u200b", inline=False)
-    		embed.add_field(name=f"**Health :heart: {mob.hp}**", value = "\u200b", inline=False)
-   		 	embed.add_field(name = "\u200b", value = "\u200b", inline=False)
-    		embed.add_field(name = f"**__{playerins.user}__**", value = "\u200b", inline=False)
-    		embed.add_field(name = f"**Health :heart: {playerins.stats['hp']}**", value = "\u200b", inline=False)
+            for i in skillbuff: #i = buff name
+                if i in list[buffs]: #buffs dont stack
+                    continue
+                addbuff = []
+                for j in skillbuff[i][1]:
+                    originalstat = playerins.stats[j]
+                    playerins.stats[j] *= skillbuff[i][1][j] #multiplies player's current specific stats with the multiplier 
+                    difference = playerins.stats[j] - originalstat #states the diffrence in numerical value
+                    addbuff.append(f'{j}:{difference}')
+                
+                buffs[i] = [' '.join(addbuff)] + [backgroundtime, skillbuff[i][0]]
+                
+                    
+            embed = discord.Embed(title =f"**{playerins.user}'s __Battle Status__**", description = f"You used {skillname} to deal {dmg} damage to the monster!")
+            embed.add_field(name = f"**__{mob.name}__**", value = "\u200b", inline=False)
+            embed.add_field(name=f"**Health :heart: {mob.hp}**", value = "\u200b", inline=False)
+            embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+            embed.add_field(name = f"**__{playerins.user}__**", value = "\u200b", inline=False)
+            embed.add_field(name = f"**Health :heart: {playerins.stats['hp']}**", value = "\u200b", inline=False)
                 
         except:
             await ctx.send("Skill not found!")
@@ -641,16 +642,16 @@ async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Pa
 
 async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict):
 # buffs {"buffname" : ["effects"('statname:value(buff values would be in percentages but here itll be the numerical value of the percentageinc/dec)statname2:value'), backgroundtime at which it had been applied, duration]}
-	"""
-	checks every second in the background while battle is going on to see if player or mob has died and if so, cancels everything
-	to end the battle, checks also for buffs wether they have ended or not
-	"""
+    """
+    checks every second in the background while battle is going on to see if player or mob has died and if so, cancels everything
+    to end the battle, checks also for buffs wether they have ended or not
+    """
     if not playerins.party:
-		checkdead = "playerins.stats['hp'] <= 0"
-	else:
-		partyins = playerins.party
-		checkdead = "partyins.checkdead()" #false = not all dead
-	while True:
+        checkdead = "playerins.stats['hp'] <= 0"
+    else:
+        partyins = playerins.party
+        checkdead = "partyins.checkdead()" #false = not all dead
+    while True:
         if any([
             mob.hp <= 0,
             eval(checkdead),
@@ -699,13 +700,13 @@ async def test(ctx):
 
 
 async def singlebattle(ctx, check):
-'''
-Function for letting players battle with monsters. Only works with one person.
-Anyone in a party is not allowed to battle
-'''
-	playerins = players[f'{ctx.author.id}']
-	mobins = await randmob(playerins)
-	mobdamaging = await returntaskmobattack(ctx, playerins, mobins)
+    '''
+    Function for letting players battle with monsters. Only works with one person.
+    Anyone in a party is not allowed to battle
+    '''
+    playerins = players[f'{ctx.author.id}']
+    mobins = await randmob(playerins)
+    mobdamaging = await returntaskmobattack(ctx, playerins, mobins)
     mobdamaging = await mobdamaging
     buffs = {}
     checkmessage = await asyncio.ensure_future(messageattack(ctx, check, buffs, mobins))
@@ -749,9 +750,9 @@ async def create_guild(ctx, *, guildname):
 
 @client.command(aliases = ["gsetrole", "gset"])
 async def guildsetrole(ctx, member : discord.Member, *,  role):
-	"""
-	allows user to edit a specific guild-role's permissions
-	"""
+    """
+    allows user to edit a specific guild-role's permissions
+    """
     check = await checkstart(ctx, game = True)
     if not check:
         return
@@ -1132,11 +1133,11 @@ async def geditrole(ctx, *, rolename):
             await ctx.send("Invalid input!")
             return
 
-				   
-				   
-				   
-				   
-				   
+                   
+                   
+                   
+                   
+                   
     
         
 #game commands
@@ -1168,32 +1169,32 @@ async def showinv(ctx):
     await ctx.send(embed=embed)
     
 
-@client.command(aliases = ["ag"]):
+@client.command(aliases = ["ag"])
 async def advguild(ctx):
-	check = await checkstart(ctx, game =True)
-	if not check:
-		return
-	playerins = players[str(ctx.author.id)]
-	embed = discord.Embed(title = "**__Guild Master Yuki greets you with a gentle smile and asks what you would like to do today__**")
-	embed.add_field(name = "\u200b", value = "\u200b", inline=False)
- 	embed.add_field(name = "**Options**", value = "\u200b")
-	embed.add_field(name = "*1) Get your adventurer card*", value = "\u200b", inline=False)
-	embed.add_field(name = "*2) Upgrade your adventurer rank*", value = "\u200b", inline=False)
-	embed.add_field(name = "*3) See quests*", value = "\u200b", inline=False)
-	embed.add_field(name = "*4) See shop*", value = "\u200b", inline=False)
-	embed.add_field(name = "*5) Nevermind lol*", value = "\u200b", inline=False)
-	embed.set_footer(text = "Enter the number of your option")
-	await ctx.send(embed=embed)
-	def check(message):
-		return message.author == ctx.author
-	txt = await client.wait_for(message, check, 50)
-	if txt == "1":
-		if playerins.advcard:
-			await ctx.send("You already have an adventurer card!")
-			return
-	elif txt == "2":
-		
-			
+    check = await checkstart(ctx, game =True)
+    if not check:
+        return
+    playerins = players[str(ctx.author.id)]
+    embed = discord.Embed(title = "**__Guild Master Yuki greets you with a gentle smile and asks what you would like to do today__**")
+    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+    embed.add_field(name = "**Options**", value = "\u200b")
+    embed.add_field(name = "*1) Get your adventurer card*", value = "\u200b", inline=False)
+    embed.add_field(name = "*2) Upgrade your adventurer rank*", value = "\u200b", inline=False)
+    embed.add_field(name = "*3) See quests*", value = "\u200b", inline=False)
+    embed.add_field(name = "*4) See shop*", value = "\u200b", inline=False)
+    embed.add_field(name = "*5) Nevermind lol*", value = "\u200b", inline=False)
+    embed.set_footer(text = "Enter the number of your option")
+    await ctx.send(embed=embed)
+    def check(message):
+        return message.author == ctx.author
+    txt = await client.wait_for(message, check, 50)
+    if txt == "1":
+        if playerins.advcard:
+            await ctx.send("You already have an adventurer card!")
+            return
+    elif txt == "2":
+        pass
+        # MARK:- TODO: What does this do??
 
 @client.command(aliases = ["towninfo"])
 async def tinfo(ctx):
@@ -1481,9 +1482,9 @@ async def explore(ctx):
         partymembers = playerins.party.members
         def check(message):
             return message.author in partymembers
-	singlebattle(ctx, check)
-		    
-	#message(ctx, check, partymembers)
+    singlebattle(ctx, check)
+            
+    #message(ctx, check, partymembers)
         
 ##    mobattack = returntaskmobattack(mobins.cooldown, monsterattack, ctx, playerins, mobdmg, mobins)
 ##    mobattack = await mobattack
@@ -1539,8 +1540,8 @@ async def systemban(ctx, member : discord.Member, *, reason):
             return
     playerins = players[str(member.id)]
     if not playerins.guild:
-    	for i in playerins.guild.members:
-        	memberins = players[i]
+        for i in playerins.guild.members:
+            memberins = players[i]
             memberins.guild = None
             memberins.guildpos = None
             memberins.guildins = None
@@ -1556,17 +1557,17 @@ async def systemban(ctx, member : discord.Member, *, reason):
         playerins.party = None
     
     try:
-    	banned[str(member.id)] = players[str(member.id)]
-	except:
-		banned[str(member.id)] = None
-					
+        banned[str(member.id)] = players[str(member.id)]
+    except:
+        banned[str(member.id)] = None
+                    
     today = datetime.now()
     banperson = ctx.author.name + ctx.author.discriminator
     banpersonid = str(ctx.author.id)
     today = today.strftime("%A %d %B %Y %I:%M %p")
     baninfo[str(member.id)] = [reason, today, banperson, banpersonid]
-					
-					
+                    
+                    
 @client.command()
 async def adminsave(ctx):
     if str(ctx.author.id) not in admin:
