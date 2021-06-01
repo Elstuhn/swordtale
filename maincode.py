@@ -737,6 +737,13 @@ async def singlebattle(ctx, check):
     else:
         await ctx.send("u won the battle!")
     
+@client.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(f'This command is not ready to use, try again in %.2f seconds' % error.retry_after, delete_after=error.retry_after)
+        await asyncio(error.retry_after)
+        return
+
 #async def battle(playerins               
 
 #guild commands
@@ -1352,7 +1359,7 @@ async def pinvite(ctx, member : discord.Member):
 
     
 @client.command()
-@commands.cooldown(1, 25, commands.BucketType.user)
+@commands.cooldown(1, 15, commands.BucketType.user)
 async def move(ctx, direction):
     check = await checkstart(ctx, game = True)
     if not check:
