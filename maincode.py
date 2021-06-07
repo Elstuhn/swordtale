@@ -30,9 +30,10 @@ class Player(): #Player Class
         self.guildpos = None
         self.guildins = None
         self.party = None    #party instance
+        self.statsp = {'maxhp' : 20, 'agility' : 0, 'atk': 0, 'defense' : 0, 'phys_atk' : 0, 'phys_def' : 0, 'mag_def' : 0, 'mag_atk' : 0, 'looting' : 0, 'cooldown_speed' : 0}
         self.stats = {'maxhp' : 20, 'hp' : 20, 'agility' : 1, 'atk': 5, 'defense' : 2, 'phys_atk' : 1, 'phys_def' : 1, 'mag_def' : 1, 'mag_atk' : 1, 'looting' : 0, 'cooldown_speed' : 0}
         self.class_ = None
-        self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: skill name, 4: phy_atk multiplier, 5: mag_atk multiplier 6: {'buffname' : [seconds, {'buffs'('statname': percentage)}]} 7: cooldown time(seconds)
+        self.skills = {"e" : [0, 0, 'Beginner', 'punch', 1, 1, {}, 5]} #index 0: times used, index 1: level, index 2: level name, index 3: skill name, 4: phy_atk multiplier, 5: mag_atk multiplier 6: {'buffname' : [seconds, {'buffs'('statname': percentage)}]} 7: cooldown time(seconds)
         self.location = ["4-4", "Agelock Town - It seems like time slows down in this town?"]
         self.fightstat = [None, 1] #In fight (if not, None, else, True) index 1 shows if dead or not (1 = alive, 0 = ded)
         self.status = "Adventurer"
@@ -150,6 +151,14 @@ class Consumable():
         self.physdef = phys_def
         self.magatk = mag_atk
         self.magdef = mag_def
+
+class Error(Exception):
+    """Base class for other exceptions"""
+    pass
+
+class EndProcess(Erorr):
+    """For the three battling functions"""
+    pass
 
 from FileMonster import *
 
@@ -403,19 +412,18 @@ async def start(ctx):
     playerrace = racelist[number-1]
     try:
         playername = await client.wait_for("message", check=checknum, timeout = 20)
-        playername = playername.content
-        if not playername.isalnum():
-            await ctx.send("Player name has to be alphanumerical. Try again next time!")
-            return
-        elif len(playername) < 3:
-            await ctx.send("Length of name has to be more than 2. Try again next time!")
-            return
-        elif playername in players:
-            await ctx.send("Name taken! Try again next time!")
-            return
-        
     except asyncio.TimeoutError as e:
         await ctx.send("You took too long!")
+        return
+    playername = playername.content
+    if not playername.isalnum():
+        await ctx.send("Player name has to be alphanumerical. Try again next time!")
+        return
+    elif len(playername) < 3:
+        await ctx.send("Length of name has to be more than 2. Try again next time!")
+        return
+    elif playername in players:
+        await ctx.send("Name taken! Try again next time!")
         return
     playerins = Player(playername, playerrace)
     players[f'{ctx.author.id}'] = playerins
@@ -430,7 +438,7 @@ async def start(ctx):
     await ctx.send(embed = embed)
     racestat = races[playerrace]
     for stat in racestat:
-        playerins.stats[stat] += racestat[stat]
+        playerins.statsp[stat] += racestat[stat]
 
     
 #internal functions
@@ -470,7 +478,7 @@ async def randmob(playerins):
     mag_atk = round(mobins[5]*moblevel)
     mag_def = round(mobins[6]*moblevel)
     cooldown = mobins[7]
-    mob = Mob(moblevel, atk, hp, defense, phys_atk, phys_def, mag_atk, mag_def, cooldown)
+    mob = Mob(mobchoice, moblevel, atk, hp, defense, phys_atk, phys_def, mag_atk, mag_def, cooldown, multiplier)
     return mob
     
 async def monsterattack(ctx, playerins, mob):
@@ -478,10 +486,10 @@ async def monsterattack(ctx, playerins, mob):
     calculates mob damage done and subtracts that from player's hp
     sends an embed object back to show how much health each of them has left
     """
-    dmg = calcmobdmg(playerins, mob)
+    dmg = await calcmobdmg(playerins, mob)
     playerins.stats['hp'] -= dmg
-    embed = discord.Embed(title =f"**{playerins.user}'s __Battle Status__**", description = f"{mob} has attacked you for {dmg} damage!")
-    embed.add_field(name = f"**__{mob.name}__**", value = "\u200b", inline=False)
+    embed = discord.Embed(title =f"**__{playerins.user}'s Battle Status__**", description = f"Lvl {mob.level} {mob.name} has attacked you for {dmg} damage!")
+    embed.add_field(name = f"**__Level {mob.level} {mob.name}__**", value = "\u200b", inline=False)
     embed.add_field(name=f"**Health :heart: {mob.hp}**", value = "\u200b", inline=False)
     embed.add_field(name = "\u200b", value = "\u200b", inline=False)
     embed.add_field(name = f"**__{playerins.user}__**", value = "\u200b", inline=False)
@@ -558,6 +566,8 @@ async def gearvalues(playerins) -> dict:
     
     for i in playergear:
         gear = playergear[i]
+        if not gear:
+            continue
         totalphyatk += gear.phyatk
         totalmagdef += gear.magdef
         totalmagatk += gear.magatk
@@ -579,11 +589,11 @@ async def calcplayerdmg(playerins , mobins, skillphyatk, skillmagatk):
         else:
             return round(value)
     playerstats = playerins.stats
-    gearvalues = await gearvalues(playerins)
-    playerphyatk = gearvalues['phyatk']
-    playermagatk = gearvalues['magatk']
-    playerOriginalDmg = (playerstats['atk'] * playerweapon.atk) + default(playerphyatk * skillphyatk * playerstats['phys_atk'] - mobins.phys_def * mobins.level) + default(playermagatk * skillmagatk * playerstats['mag_atk']- mobins.mag_def*mobins.level)
-    playerTrueDmg = playerOriginalDmg - mobins.defense   
+    gearvalue = await gearvalues(playerins)
+    playerphyatk = gearvalue['phyatk']
+    playermagatk = gearvalue['magatk']
+    playerOriginalDmg = (playerstats['atk'] * playerphyatk) + default(playerphyatk * skillphyatk * playerstats['phys_atk'] - mobins.phys_def * mobins.level) + default(playermagatk * skillmagatk * playerstats['mag_atk']- mobins.mag_def*mobins.level)
+    playerTrueDmg = default(playerOriginalDmg - mobins.defense)   
     return playerTrueDmg
 
 async def calcmobdmg(playerins, mobins):
@@ -595,12 +605,13 @@ async def calcmobdmg(playerins, mobins):
             return 1
         else:
             return round(value)
-    gearvalues = await gearvalues(playerins)
-    gearphydef = gearvalues['phydef']
-    gearmagdef = gearvalues['magdef']
+    gearvalue = await gearvalues(playerins)
+    gearphydef = gearvalue['phydef']
+    gearmagdef = gearvalue['magdef']
+    playerstats = playerins.stats
     mobOriginalDmg = mobins.atk + default(mobins.phys_atk - playerstats['phys_def'] * gearphydef) + default(mobins.mag_atk - playerstats['mag_def'] * gearmagdef)
     mobTrueDmg = mobOriginalDmg - playerstats['defense']
-    return mobTrueDmg
+    return default(mobTrueDmg)
         
             
 async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Party instance
@@ -625,17 +636,16 @@ async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Pa
                     playerins = players[i]
                     playerins.stats['hp'] = 0
             return 0
+        playerins = players[str(_.author.id)]
         _ = _.content
         #ctx might not be referring to the sender of the message
-        playerins = players[str(_.author.id)]
         try:
             skillinfo = playerins.skills[_]
             skillname = skillinfo[3]
-            atk = playerins.stats['atk']*skillinfo[4]
             mag_atk = skillinfo[5]
             phys_atk = skillinfo[4]
             skillbuff = skillinfo[6]
-            dmg = calcplayerdmg(playerins, mobins, phys_atk, mag_atk)
+            dmg = await calcplayerdmg(playerins, mobins, phys_atk, mag_atk)
             mobins.hp -= dmg
             for i in skillbuff: #i = buff name
                 if i in list[buffs]: #buffs dont stack
@@ -681,20 +691,21 @@ async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict
             ]):
             monsterattack.cancel()
             messageattack.cancel()
+            mobattack.cancel()
             break
-            for i in buffs:
-                buff = buffs[i] #list
-                time = backgroundtime
-                time -= buff[1] #time(seconds) passed after buff had been applied
-                if time >= buff[2]:
-                    effects = buff[0]
-                    effects = effects.split()
-                    for j in effects:
-                        j = j.split(':')
-                        buffname = j[0]
-                        buffvalue = j[1]
-                        exec(f'playerins.stats[{buffname}] -= {buffvalue}')
-                    del buffs[i]
+        for i in buffs:
+            buff = buffs[i] #list
+            time = backgroundtime
+            time -= buff[1] #time(seconds) passed after buff had been applied
+            if time >= buff[2]:
+                effects = buff[0]
+                effects = effects.split()
+                for j in effects:
+                    j = j.split(':')
+                    buffname = j[0]
+                    buffvalue = j[1]
+                    exec(f'playerins.stats[{buffname}] -= {buffvalue}')
+                del buffs[i]
         await asyncio.sleep(1)
 
 @client.command()
@@ -731,7 +742,7 @@ async def singlebattle(ctx, check):
     mobdamaging = await mobdamaging
     buffs = {}
     checkmessage = await asyncio.ensure_future(messageattack(ctx, check, buffs, mobins))
-    secondcheck = await asyncio.ensure_future(secondcheck(ctx, mobdamaging, checkmessage, mobins, playerins, buffs))
+    checksecond = await asyncio.ensure_future(secondcheck(ctx, mobdamaging, checkmessage, mobins, playerins, buffs))
     if playerins.stats['hp'] <= 0:
         await ctx.send("Haha u lost noob idiot")
     else:
@@ -743,6 +754,8 @@ async def on_command_error(ctx, error):
         await ctx.send(f'This command is not ready to use, try again in %.2f seconds' % error.retry_after, delete_after=error.retry_after)
         await asyncio(error.retry_after)
         return
+    else:
+        print(error)
 
 #async def battle(playerins               
 
@@ -819,7 +832,6 @@ async def guildsetrole(ctx, member : discord.Member, *,  role):
     elif role3 == role2:
         await ctx.send("User is already that role")
     elif role1 == role3 or role3 < role1:
-        print('yes man')
         await ctx.send("You do not have permissions to do this!")
         return
 
@@ -1231,7 +1243,10 @@ async def tinfo(ctx):
         return
     playerins = players[f'{ctx.author.id}']
     location = playerins.location[0]
-    embed = locationinfo[location]
+    try:
+        embed = locationinfo[location]
+    except:
+        embed = discord.Embed(title = "**__The Wilderness__**", description = "Just the wilderness. Where are you going?")
     await ctx.send(embed=embed)
 
 @client.command(aliases = ["tint", "interact"])
@@ -1422,12 +1437,12 @@ async def stats(ctx):
     if not check:
         return
     player = players[str(ctx.author.id)]
-    playerstats = player.stats
-    embed = discord.Embed(title = f"**__{player.user}'s Stats__**")
+    playerstats = player.statsp
+    embed = discord.Embed(title = f"**__{player.user}'s Stats__**\t\t\t**__{player.race}__**")
     embed.add_field(name = "\u200b", value = "\u200b")
     embed.add_field(name = "**__Percentages__**", value = "\u200b")
     embed.add_field(name = "\u200b", value = "\u200b")
-    embed.add_field(name = "HP :heart:", value = f"{playerstats['hp']}%")
+    embed.add_field(name = "MaxHP :heart:", value = f"{playerstats['maxhp']}%")
     embed.add_field(name = "Agility :dash:", value = f"{playerstats['agility']}%")
     embed.add_field(name = "Looting :money_mouth:", value = f"{playerstats['looting']}%")
     embed.add_field(name = "Attack :dagger:", value = f"{playerstats['atk']}%")
@@ -1452,6 +1467,8 @@ async def stats(ctx):
     embed.add_field(name = "Physical Defense", value = f"{playerstats['phys_def']}")
     embed.add_field(name = "Magic Attack", value = f"{playerstats['mag_atk']}")
     embed.add_field(name = "Magic Defense", value = f"{playerstats['mag_def']}")
+    embed.add_field(name = "Looting :money_mouth:", value = f"{playerstats['looting']}")
+    embed.add_field(name = "Cooldown Speed", value = f"{playerstats['cooldown_speed']}")
     await ctx.send(embed=embed)
 
 @client.command(aliases = ["playerinfo"])
@@ -1499,18 +1516,21 @@ async def explore(ctx):
     playerins = players[f'{ctx.author.id}']
     location = playerins.location[0]
     location = location.split('-')
-    if map_[location[0]][location[1]] == 't':
+    if map_[int(location[0])][int(location[1])] == 't':
         await ctx.send("You cannot do this in a town!")
+        return
+    elif playerins.stats['hp'] <= 0:
+        await ctx.send("Dude you don't have health.")
         return
     if playerins.party == None:
         partymembers = None
         def check(message):
-            return message.author == ctx.author
+            return all([message.author == ctx.author, message.content in players[str(ctx.author.id)].skills])
     else:
         partymembers = playerins.party.members
         def check(message):
-            return message.author in partymembers
-    singlebattle(ctx, check)
+            return all([message.author in partymembers, message.content in players[str(message.author.id)].skills])
+    await singlebattle(ctx, check)
             
     #message(ctx, check, partymembers)
         
@@ -1603,6 +1623,16 @@ async def adminsave(ctx):
         return
     fm.save(data)
     await ctx.send("Saved!")
+
+@client.command()
+async def forceheal(ctx):
+    if str(ctx.author.id) not in admin:
+        await ctx.send("Sorry! You do not have permission.")
+        return
+    playerins = players[str(ctx.author.id)]
+    playerstats = playerins.stats
+    playerstats['hp'] = playerstats['maxhp']
+    await ctx.send('You have been healed by magical powers!')
 
 @client.command()
 async def grant(ctx, member : discord.Member, *, status):
