@@ -759,6 +759,10 @@ async def singlebattle(ctx, check):
     print('done3')
     print(checkmessage)
     await checksecond
+    if playerins.stats['hp'] <= 0:
+        await ctx.send("Haha u lost noob idiot")
+    else:
+        await ctx.send("u won the battle!")
     
 @client.event
 async def on_command_error(ctx, error):
