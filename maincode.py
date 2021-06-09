@@ -519,11 +519,13 @@ async def taskbattle(ctx, playerins, mob):
         alive = [players[i] for i in playerins.party.members] #makes a list of player instances from party members
 
     while True:
+        print('taskbattle still running')
         _ = await monsterattack(ctx, playerins, mob)
-        if not playerins.stats['hp'] < 1:
+        if not any([playerins.stats['hp'] < 1, mob.hp < 1]):
             await asyncio.sleep(seconds)
         elif not playerins.party:
             return 0
+            #raise EndProcess
         else:
             playerins.fightstat[1] = 0
             members = playerins.party.members
@@ -535,10 +537,12 @@ async def taskbattle(ctx, playerins, mob):
                     
             if not check:
                 return 0
+                #raise EndProcess
             else:
                 index = alive.index(playerins)
                 del alive[index]
                 playerins = random.choice(alive)
+    return 0
 
 
 async def returntaskmobattack(ctx, playerins, mob):
@@ -623,12 +627,14 @@ async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Pa
     playerins = players[str(ctx.author.id)]
     partymembers = playerins.party
     while True:
+        print('messageattack still running')
+        if playerins.stats['hp'] <= 0:
+            return 0
         try:
             _ = await client.wait_for("message", check = check, timeout = 540)
 
         except asyncio.TimeoutError as e:
             await ctx.send("You took too long thus the battle has ended you slowpoke.")
-            return 0
             if not partymembers:
                 playerins.stats['hp'] = 0
             else:
@@ -639,36 +645,37 @@ async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Pa
         playerins = players[str(_.author.id)]
         _ = _.content
         #ctx might not be referring to the sender of the message
-        try:
-            skillinfo = playerins.skills[_]
-            skillname = skillinfo[3]
-            mag_atk = skillinfo[5]
-            phys_atk = skillinfo[4]
-            skillbuff = skillinfo[6]
-            dmg = await calcplayerdmg(playerins, mobins, phys_atk, mag_atk)
-            mobins.hp -= dmg
-            for i in skillbuff: #i = buff name
-                if i in list[buffs]: #buffs dont stack
-                    continue
-                addbuff = []
-                for j in skillbuff[i][1]:
-                    originalstat = playerins.stats[j]
-                    playerins.stats[j] *= skillbuff[i][1][j] #multiplies player's current specific stats with the multiplier 
-                    difference = playerins.stats[j] - originalstat #states the diffrence in numerical value
-                    addbuff.append(f'{j}:{difference}')
+        skillinfo = playerins.skills[_]
+        skillname = skillinfo[3]
+        mag_atk = skillinfo[5]
+        phys_atk = skillinfo[4]
+        skillbuff = skillinfo[6]
+        dmg = await calcplayerdmg(playerins, mobins, phys_atk, mag_atk)
+        mobins.hp -= dmg
+        for i in skillbuff: #i = buff name
+            if i in list[buffs]: #buffs dont stack
+                continue
+            addbuff = []
+            for j in skillbuff[i][1]:
+                originalstat = playerins.stats[j]
+                playerins.stats[j] *= skillbuff[i][1][j] #multiplies player's current specific stats with the multiplier 
+                difference = playerins.stats[j] - originalstat #states the diffrence in numerical value
+                addbuff.append(f'{j}:{difference}')
+            
+            buffs[i] = [' '.join(addbuff)] + [backgroundtime, skillbuff[i][0]]
                 
-                buffs[i] = [' '.join(addbuff)] + [backgroundtime, skillbuff[i][0]]
+        embed = discord.Embed(title =f"**__{playerins.user}'s Battle Status__**", description = f"You used {skillname} to deal {dmg} damage to the monster!")
+        embed.add_field(name = f"**__Lvl {mobins.level} {mobins.name}__**", value = "\u200b", inline=False)
+        embed.add_field(name=f"**Health :heart: {mobins.hp}**", value = "\u200b", inline=False)
+        embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+        embed.add_field(name = f"**__{playerins.user}__**", value = "\u200b", inline=False)
+        embed.add_field(name = f"**Health :heart: {playerins.stats['hp']}**", value = "\u200b", inline=False)
+        await ctx.send(embed=embed)
+        if mobins.hp < 1:
+            return 0
                 
-                    
-            embed = discord.Embed(title =f"**{playerins.user}'s __Battle Status__**", description = f"You used {skillname} to deal {dmg} damage to the monster!")
-            embed.add_field(name = f"**__{mob.name}__**", value = "\u200b", inline=False)
-            embed.add_field(name=f"**Health :heart: {mob.hp}**", value = "\u200b", inline=False)
-            embed.add_field(name = "\u200b", value = "\u200b", inline=False)
-            embed.add_field(name = f"**__{playerins.user}__**", value = "\u200b", inline=False)
-            embed.add_field(name = f"**Health :heart: {playerins.stats['hp']}**", value = "\u200b", inline=False)
-                
-        except:
-            await ctx.send("Skill not found!")
+        #except:
+        #    await ctx.send("Skill not found!")
 
         await asyncio.sleep(1)
 
@@ -678,20 +685,19 @@ async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict
     checks every second in the background while battle is going on to see if player or mob has died and if so, cancels everything
     to end the battle, checks also for buffs wether they have ended or not
     """
+    print('started')
     if not playerins.party:
         checkdead = "playerins.stats['hp'] <= 0"
     else:
         partyins = playerins.party
         checkdead = "partyins.checkdead()" #false = not all dead
     while True:
+        print('secondcheck still running')
         if any([
-            mob.hp <= 0,
+            mob.hp < 1,
             eval(checkdead),
-            messageattack.done()
+            checkmessage.done()
             ]):
-            monsterattack.cancel()
-            messageattack.cancel()
-            mobattack.cancel()
             break
         for i in buffs:
             buff = buffs[i] #list
@@ -707,6 +713,8 @@ async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict
                     exec(f'playerins.stats[{buffname}] -= {buffvalue}')
                 del buffs[i]
         await asyncio.sleep(1)
+    print('ending secondcheck')
+    return 0
 
 @client.command()
 async def test(ctx):
@@ -730,7 +738,6 @@ async def test(ctx):
 #        if _.content == "ow":
 #            await ctx.send("haha rekt")
 
-
 async def singlebattle(ctx, check):
     '''
     Function for letting players battle with monsters. Only works with one person.
@@ -738,15 +745,20 @@ async def singlebattle(ctx, check):
     '''
     playerins = players[f'{ctx.author.id}']
     mobins = await randmob(playerins)
-    mobdamaging = await returntaskmobattack(ctx, playerins, mobins)
-    mobdamaging = await mobdamaging
+    #mobdamaging = await returntaskmobattack(ctx, playerins, mobins)
+    mobdamaging = asyncio.ensure_future(taskbattle(ctx, playerins, mobins))
     buffs = {}
-    checkmessage = await asyncio.ensure_future(messageattack(ctx, check, buffs, mobins))
-    checksecond = await asyncio.ensure_future(secondcheck(ctx, mobdamaging, checkmessage, mobins, playerins, buffs))
-    if playerins.stats['hp'] <= 0:
-        await ctx.send("Haha u lost noob idiot")
-    else:
-        await ctx.send("u won the battle!")
+    checkmessage = asyncio.ensure_future(messageattack(ctx, check, buffs, mobins))
+    checksecond = asyncio.ensure_future(secondcheck(ctx, mobdamaging, checkmessage, mobins, playerins, buffs))
+    await mobdamaging
+    print('done1')
+    print(mobdamaging)
+    print('done2')
+    print(checksecond)
+    await checkmessage
+    print('done3')
+    print(checkmessage)
+    await checksecond
     
 @client.event
 async def on_command_error(ctx, error):
