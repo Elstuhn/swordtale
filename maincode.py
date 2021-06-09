@@ -519,7 +519,6 @@ async def taskbattle(ctx, playerins, mob):
         alive = [players[i] for i in playerins.party.members] #makes a list of player instances from party members
 
     while True:
-        print('taskbattle still running')
         _ = await monsterattack(ctx, playerins, mob)
         if not any([playerins.stats['hp'] < 1, mob.hp < 1]):
             await asyncio.sleep(seconds)
@@ -543,14 +542,6 @@ async def taskbattle(ctx, playerins, mob):
                 del alive[index]
                 playerins = random.choice(alive)
     return 0
-
-
-async def returntaskmobattack(ctx, playerins, mob):
-    """
-    basically just returns taskbattle as a task using version 3.6.3 asyncio so that it can be used to run later along with other tasks
-    """
-    tasktest = asyncio.ensure_future(taskbattle(ctx, playerins, mob))
-    return tasktest
           
 async def effectdmgplayer(ctx, dmg, seconds, playerins):
     pass
@@ -627,7 +618,6 @@ async def messageattack(ctx, check ,buffs, mobins): #if partymembers != None, Pa
     playerins = players[str(ctx.author.id)]
     partymembers = playerins.party
     while True:
-        print('messageattack still running')
         if playerins.stats['hp'] <= 0:
             return 0
         try:
@@ -685,14 +675,12 @@ async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict
     checks every second in the background while battle is going on to see if player or mob has died and if so, cancels everything
     to end the battle, checks also for buffs wether they have ended or not
     """
-    print('started')
     if not playerins.party:
         checkdead = "playerins.stats['hp'] <= 0"
     else:
         partyins = playerins.party
         checkdead = "partyins.checkdead()" #false = not all dead
     while True:
-        print('secondcheck still running')
         if any([
             mob.hp < 1,
             eval(checkdead),
@@ -713,30 +701,9 @@ async def secondcheck(ctx, mobattack, checkmessage, mob, playerins, buffs : dict
                     exec(f'playerins.stats[{buffname}] -= {buffvalue}')
                 del buffs[i]
         await asyncio.sleep(1)
-    print('ending secondcheck')
+    mobattack.cancel()
+    checkmessage.cancel()
     return 0
-
-@client.command()
-async def test(ctx):
-    def check(message):
-        return message.author == ctx.author
-    playerins = players[f'{ctx.author.id}']
-    mobins = Mob("High Level Demon", 20, 7, 6, 8, 4, 2, 3, 2, 7)
-    mobattack = returntaskmobattack(4, monsterattack, ctx, playerins, 5, mobins)
-    mobattack = await mobattack
-    checkmessage = asyncio.ensure_future(message(ctx, check))
-    buffs = {}
-    await checkdead(ctx, mobattack, checkmessage, mobins, playerins)
-    if playerins.stats['hp'] <= 0:
-        await ctx.send("Haha u lost noob idiot")
-    else:
-        await ctx.send("u won the battle!")
-    
-#    while not mobattack.done():
-#        
-#        _ = await client.wait_for("message", check = check, timeout= 130)
-#        if _.content == "ow":
-#            await ctx.send("haha rekt")
 
 async def singlebattle(ctx, check):
     '''
@@ -750,15 +717,13 @@ async def singlebattle(ctx, check):
     buffs = {}
     checkmessage = asyncio.ensure_future(messageattack(ctx, check, buffs, mobins))
     checksecond = asyncio.ensure_future(secondcheck(ctx, mobdamaging, checkmessage, mobins, playerins, buffs))
-    await mobdamaging
-    print('done1')
-    print(mobdamaging)
-    print('done2')
-    print(checksecond)
-    await checkmessage
-    print('done3')
-    print(checkmessage)
-    await checksecond
+    try:
+        await mobdamaging
+        await checksecond
+        await checkmessage
+    except:
+        pass
+
     if playerins.stats['hp'] <= 0:
         await ctx.send("Haha u lost noob idiot")
     else:
