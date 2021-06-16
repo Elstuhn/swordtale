@@ -767,7 +767,7 @@ async def singlebattle(ctx, check, area):
     Function for letting players battle with monsters. Only works with one person.
     Anyone in a party is not allowed to battle
     '''
-    def check(message):
+    def checkverify(message):
         return message.author == ctx.author
     playerins = players[f'{ctx.author.id}']
     mobins = await randmob(playerins, area)
@@ -777,7 +777,7 @@ async def singlebattle(ctx, check, area):
     embed.colour = discord.Colour.red()
     await ctx.send(embed=embed)
     try:
-        message = await client.wait_for('message', check=check, timeout = 60)
+        message = await client.wait_for('message', check=checkverify, timeout = 60)
     except asyncio.TimeoutError:
         await ctx.send("You took too long!")
         return
