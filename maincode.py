@@ -191,6 +191,7 @@ locationinfo = data.chooseobj("locationinfo") # dict {'coords' : discord.Embed}
 mobs = data.chooseobj("mobs") #{1 : {mob : [minlevel, maxlevel, multiplier, phys_atk, mag_atk, phys_def, mag_def, cooldown]}}
 guilds = data.chooseobj("guilds") # dict {'guildname' : guild instance}
 gears = data.chooseobj("gear")
+ul = data.chooseobj('update')
 
 #setup begin
 with open('token', 'rb') as readfile:
@@ -339,6 +340,7 @@ async def gamehelp(ctx):
     embed.add_field(name = ",showinv", value = "shows your inventory", inline = False)
     embed.add_field(name = ",recover", value = "Recover your hp for free", inline=False)
     embed.add_field(name = ",explore", value = "Battle a random mob. Can only be used inthe wild", inline=False)
+    embed.add_field(name = ",ul", value = "Shows the log for the latest updates", inline=False)
     embed.colour = discord.Colour.random()
     await ctx.send(embed = embed)
 
@@ -458,10 +460,10 @@ async def rewards(ctx, playerins, mobins, area):
     A function to give players rewards(exp, gold, items)
     when they win a battle
     '''
-    expgain = round(3.9*mobins.level)
+    expgain = round(4.5*mobins.level)
     if playerins.level == 14:
         expgain = 0
-    goldgain = round(4.2*mobins.level)
+    goldgain = round(9*mobins.level)
     stats = playerins.stats
     looting = stats['looting']
     lootcheck = random.random()
@@ -529,8 +531,8 @@ async def randmob(playerins, area):
     moblevel = random.randint(mobins[0], mobins[1])
     multiplier = mobins[2]
     atk = round(3.4*moblevel*multiplier)
-    hp = round(15*moblevel*multiplier)
-    defense = round(1.2*moblevel*multiplier)
+    hp = round(12*moblevel*multiplier)
+    defense = round(1.15*moblevel*multiplier)
     phys_atk = round(mobins[3]*moblevel)
     phys_def = round(mobins[4]*moblevel)
     mag_atk = round(mobins[5]*moblevel)
@@ -768,7 +770,13 @@ async def singlebattle(ctx, check, area):
     Anyone in a party is not allowed to battle
     '''
     def checkverify(message):
-        return message.author == ctx.author
+        return all([
+            message.author == ctx.author,
+            any([
+                message.content.lower() == 'yes',
+                message.content.lower() == 'no'
+                ])
+        ])
     playerins = players[f'{ctx.author.id}']
     mobins = await randmob(playerins, area)
     embed = discord.Embed(title=f"**You are about to fight lvl {mobins.level} {mobins.name}**")
@@ -1327,7 +1335,7 @@ async def advguild(ctx):
     txt = await client.wait_for("message", check, 50)
     if txt == "1":
         if playerins.advcard:
-            await ctx.send("You already have an adventurer card!")
+            await ctx.send("You already have an adventurer's card!")
             return
     elif txt == "2":
         pass
@@ -1344,6 +1352,7 @@ async def tinfo(ctx):
         embed = locationinfo[location]
     except:
         embed = discord.Embed(title = "**__The Wilderness__**", description = "Just the wilderness. Where are you going?")
+    embed.colour = discord.Colour.random()
     await ctx.send(embed=embed)
 
 @client.command(aliases = ["tint", "interact"])
@@ -1368,6 +1377,7 @@ async def tinteract(ctx, *, aim):
         return
     
     while True:
+        embed.colour = discord.Colour.random()
         await ctx.send(embed = embed)
         if len(embedlist) == 1:
             return
@@ -1576,7 +1586,7 @@ async def player(ctx):
     if not check:
         return
     playerstat = players[f'{ctx.author.id}'] #gets player instance of sender
-    embed = discord.Embed(title = f"**__{playerstat.user}'s Info__**          **__Status: {playerstat.status}__**")
+    embed = discord.Embed(title = f"**__{playerstat.user}'s Info__**         \t\t\t **__Status: {playerstat.status}__**")
     embed.add_field(name = "Gold :coin:", value = f"{playerstat.gold}")
     embed.add_field(name = "Race :flag_white:", value = f"{playerstat.race}", inline = True)
     embed.add_field(name = "Level :arrow_up:", value = f"{playerstat.level} [{playerstat.exp}/{levels[playerstat.level]}]", inline = True)
@@ -1643,20 +1653,12 @@ async def explore(ctx):
     playerins.fightstat = True
     await singlebattle(ctx, check, area)
     
-            
-    #message(ctx, check, partymembers)
-        
-##    mobattack = returntaskmobattack(mobins.cooldown, monsterattack, ctx, playerins, mobdmg, mobins)
-##    mobattack = await mobattack
-##    checkmessage = asyncio.ensure_future(message(ctx, check, partymembers))
-##    await checkdead(ctx, mobattack, checkmessage, mobins, playerins)
-##    if playerins.stats['hp'] <= 0:
-##        await ctx.send("Haha u lost noob idiot")
-##    else:
-##        await ctx.send("u won the battle!")
-##
-##        seconds, func, ctx, playerins, dmg, mob):
-        
+@client.command(aliases = ['ul'])
+async def updatelog(ctx):
+    embed = discord.Embed(title = f"{ul[0]}")
+    embed.add_field(name = f"{ul[1]}", value = "\u200b")
+    embed.colour = discord.Colour.random()
+    await ctx.send(embed = embed)        
 
 
 #admin commands
@@ -1689,6 +1691,19 @@ async def admingold(ctx, member : discord.Member, gold : int):
         await ctx.send(f"Gave {gold} gold to {member.name}")
     except:
         await ctx.send("Error! `,admingold @ user (amount of gold)`")
+        
+@client.command()
+async def adminexp(ctx, member : discord.Member, exp):
+    if str(ctx.author.id) not in admin:
+        await ctx.send("Sorry! You do not have permission.")
+        return
+    try:
+        playerins = players[f'{member.id}']
+        playerins.exp += exp
+        levelup = await levelcheck(ctx, playerins)
+        embed = discord.Embed(title = f"**Gave {exp} exp to {member.name}")  
+        embed.colour = discord.Colour.green()
+        await ctx.send(embed=embed)      
         
 @client.command()
 async def systemban(ctx, member : discord.Member, *, reason):
