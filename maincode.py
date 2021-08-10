@@ -1,5 +1,8 @@
 #make storage unit for adventure cards for adventurers guilds
 import discord
+from discord.ext import commands, tasks
+from discord.ext.commands.bot import AutoShardedBot
+from discord.ext.commands.core import check
 import time
 import typing as t
 from time import sleep
@@ -7,17 +10,13 @@ import os
 import pickle
 import asyncio
 import random
-from discord.ext import commands, tasks
 from datetime import datetime
 from collections import defaultdict
 import atexit
-from discord.ext.commands.bot import AutoShardedBot
-
-from discord.ext.commands.core import check
+import functools
 #calculate function so that damage values can be changed in the middle of battle 
 #instantiation
 areas = {'3506': 'starting'}
-
 fileopened = {}
 ''''
 Things to note:
@@ -110,7 +109,7 @@ class Role():
         self.editPerms = editPerms
         self.pos = position
 
-class Guild():
+class Guild:
     def __init__(self, name : str, owner : str):
         self.name = name
         self.owner = owner # ctx.author.id in str form
@@ -118,7 +117,20 @@ class Guild():
         self.members = {} #memberid : membername
         self.roles = {'Guild Master' : guildmaster, 'Member' : member}
         self.rolepos = ['Guild Master', 0, 0, 0, 0, 0, 'Member']
+        self.allies = {}
+        self.enemies = {}
 
+class Shop:
+    def __init__(self, owner, shop : dict):
+        self.owner = owner
+        self.shop = shop #dict{item instance : cost}
+
+    def embed(self):
+        embed = discord.Embed(title = f"**__{self.owner}'s Shop__**")
+        embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+        for num, item in enumerate(self.shop):
+            embed.add_field(name = f"**{num}. {item}**  {self.shop[item]}:coin:", value = f"*{item.lore}*", inline=False)
+        return embed
 
 class Mob():
     def __init__(self, name, level = 1, atk = 1, hp = 1, defense = 1, agility = 1, phys_atk = 1, phys_def = 1, mag_atk = 1, mag_def = 1, cooldown_speed = 4, multiplier = 1): #atk, defense, hp will be calculated as constant*multiplier
@@ -137,7 +149,7 @@ class Mob():
 
 
 class Gear():
-    def __init__(self, name : str, lore : str, emoji : str, type_ : str, hp : int = 0, atk : int = 0, defense : int = 0, agility : int = 0, phys_atk : int = 0, phys_def : int = 0, mag_atk : int = 0, mag_def : int = 0):
+    def __init__(self, name : str, lore : str, emoji : str, type_ : str, hp : int = 0, atk : int = 0, defense : int = 0, agility : int = 0, phys_atk : int = 0, phys_def : int = 0, mag_atk : int = 0, mag_def : int = 0, looting : int = 0):
         self.name = name
         self.lore = lore
         self.emoji = emoji
@@ -150,6 +162,18 @@ class Gear():
         self.phydef = phys_def
         self.magatk = mag_atk
         self.magdef = mag_def
+        self.looting = looting
+        self.dict_ = {
+            'hp' : self.hp,
+            'atk' : self.atk,
+            'defense' : self.defense,
+            'agility' : self.agility,
+            'phy_atk' : self.phyatk,
+            'phy_def' : self.phydef,
+            'mag_atk' : self.magatk,
+            'mag_def' : self.magdef,
+            'looting' : self.looting
+        }
     
     def __str__(self):
         return f"(name={self.name}, lore = {self.lore}, emoji = {self.emoji}, type = {self.type_}, hp = {self.hp}, atk = {self.atk}, defense = {self.defense}, agility = {self.agility}, phyatk = {self.phyatk}, phydef = {self.phydef}, magatk = {self.magatk}, magdef = {self.magdef})"
@@ -164,9 +188,11 @@ class Item():
         self.lore = lore
 
 class Consumable():
-    def __init__(self, name, lore, atk, defense, agility, phys_atk, phys_def, mag_atk, mag_def):
+    def __init__(self, name, lore, emoji = '', hp = 0, atk = 0, defense = 0, agility = 0, phys_atk = 0, phys_def = 0, mag_atk = 0, mag_def = 0, looting=0):
         self.name = name
         self.lore = lore
+        self.emoji = emoji
+        self.hp = hp
         self.atk = atk
         self.defense = defense
         self.agility = agility
@@ -174,6 +200,24 @@ class Consumable():
         self.physdef = phys_def
         self.magatk = mag_atk
         self.magdef = mag_def
+        self.looting = looting
+        self.dict_ = {
+            'hp' : self.hp,
+            'atk' : self.atk,
+            'defense' : self.defense,
+            'agility' : self.agility,
+            'phys_atk' : self.physatk,
+            'phys_def' : self.physdef,
+            'mag_atk' : self.magatk,
+            'mag_def' : self.magdef,
+            'looting' : self.looting
+        }
+        
+    def __str__(self):
+        return f"(name={self.name}, lore = {self.lore}, emoji = {self.emoji}, stats = {self.dict_}"
+    
+    def __repr__(self):
+        return self.name
 
 class Error(Exception):
     """Base class for other exceptions"""
@@ -204,6 +248,8 @@ guilds = data.chooseobj("guilds") # dict {'guildname' : guild instance}
 gears = data.chooseobj("gear")
 ul = data.chooseobj('update')
 ag = data.chooseobj('ag')
+shops = data.chooseobj('shops')
+
 #setup begin
 with open('token', 'rb') as readfile:
     TOKEN = pickle.load(readfile)
@@ -226,30 +272,30 @@ async def checkstart(ctx, game = False, private = False, fighting = False, procc
     Game = True means check for if player has a profile or not
     private = True means the command can be used in DMs
     fighting = True means check for if user is fighting, if he is return False
-    proc = True means check if a player is in any processes at all
+    proccheck = True means check if a player is in any processes at all
     """
     channel = ctx.channel.type
     channel = str(channel)
-    playerins = players[str(ctx.author.id)]
     name = ctx.author.name
-    if str(ctx.author.id) in banned:
+    authorid = str(ctx.author.id)
+    if authorid in banned:
         await ctx.send("Sorry! You are banned.")
         return False
     
     elif channel == "private" and not private:
         return False
     
-    elif str(ctx.author.id) not in players:
+    elif authorid not in players and game:
         embed = discord.Embed("You haven't started your adventure yet! Start it with `,start`")
         await ctx.send(embed=embed)
         return False
 
-    elif fighting and playerins.fightstat:
+    elif fighting and players[f'{authorid}'].fightstat:
         embed = discord.Embed(title = "**You're currently in a fight!**")
         await ctx.send(embed=embed)
         return False
      
-    elif proccheck and playerins.proc:
+    elif proccheck and players[f'{authorid}'].proc:
         embed = discord.Embed(title = "**Focus on what you are doing!**")
         await ctx.send(embed=embed)
         return False
@@ -259,6 +305,7 @@ async def checkstart(ctx, game = False, private = False, fighting = False, procc
 
 def systemcheck(game = False, private = False, fighting = False, proc=False):
     def wrap(func):
+        @functools.wraps(func)
         async def wrapped(ctx, *args, **kwargs):
             check = await checkstart(ctx, game, private, fighting, proc)
             if not check:
@@ -293,7 +340,7 @@ prefix = ","
 #Setup finished
 #functions begin
 
-
+#Normal bot commands
 @client.command()
 async def invite(ctx):
     check = await checkstart(ctx)
@@ -316,13 +363,14 @@ async def server(ctx):
     embedVar.set_author(name = ctx.author.name, icon_url = ctx.author.avatar_url)
     embedVar.set_thumbnail(url = yeet.icon_url)
     await ctx.send(embed=embedVar)
+    
 
 @client.command()
 async def ping(ctx):
     await ctx.send(f"Pong! {round(client.latency, 2)}ms")
 
-@systemcheck
 @client.command()
+@systemcheck()
 async def help(ctx):
     await ctx.trigger_typing()
     embedVar = discord.Embed(title = "General Commands List")
@@ -386,6 +434,7 @@ async def gamehelp(ctx):
     embed.add_field(name = ",rlb", value = "Shows the top richest players", inline=False)
     embed.add_field(name = ",itemshow (slot number)", value = "Shows information for the gear", inline=False)
     embed.add_field(name = ",advguild", value = "Interacts with the Adventurer's Guild", inline=False)
+    embed.add_field(name = ",gvlb", value = "Looks at top 10 richest guilds", inline=False)
     embed.colour = discord.Colour.random()
     await ctx.send(embed = embed)
 
@@ -772,7 +821,7 @@ async def gearvalues(playerins) -> dict:
     values of the player's current equipped gear
     '''
     playergear = playerins.gear
-    totalphyatk = totalmagdef = totalag = totalatk = totaldef = totalphydef = totalmagatk = 1    
+    totalphyatk = totallooting = totalmagdef = totalag = totalatk = totaldef = totalphydef = totalmagatk = 1    
     for i in playergear:
         gear = playergear[i]
         if not gear:
@@ -784,6 +833,7 @@ async def gearvalues(playerins) -> dict:
         totalphydef += gear.phydef
         totaldef += gear.defense
         totalag += gear.agility
+        totallooting += gear.looting
     
     return {'atk' : totalatk,
             'phyatk' : totalphyatk,
@@ -791,9 +841,9 @@ async def gearvalues(playerins) -> dict:
             'magatk' : totalmagatk,
             'magdef' : totalmagdef,
             'def' : totaldef,
-            'ag' : totalag
+            'ag' : totalag,
+            'looting' : totallooting
             }
-
 
 async def calcplayerdmg(playerins, mobins, skillphyatk, skillmagatk):
     '''
@@ -1013,10 +1063,8 @@ async def on_command_error(ctx, error):
 #guild commands
 
 @client.command(aliases = ["gcreate"])
+@systemcheck(game=True, proc=True)
 async def create_guild(ctx, *, guildname):
-    check = await checkstart(ctx, game = True)
-    if not check:
-        return
     playerins = players[f'{ctx.author.id}']
     if playerins.guild != None:
         await ctx.send("Error! You are already in a guild!")
@@ -1041,13 +1089,11 @@ async def create_guild(ctx, *, guildname):
     guildins.members[f'{ctx.author.id}'] = f'{playerins.user}'
 
 @client.command(aliases = ["gsetrole", "gset"])
+@systemcheck(game=True, proc=True)
 async def guildsetrole(ctx, member : discord.Member, *,  role):
     """
     allows user to edit a specific guild-role's permissions
     """
-    check = await checkstart(ctx, game = True)
-    if not check:
-        return
     playerins = players[f"{ctx.author.id}"]
 
     try:
@@ -1104,8 +1150,8 @@ async def guildhelp(ctx):
     embed.add_field(name = ",gmembers", value = "displays all members of the guild you are in ", inline = False)
     await ctx.send(embed=embed)
 
-@systemcheck(game=True)
 @client.command(aliases = ["guildinfo"])
+@systemcheck(game=True)
 async def guild(ctx, member : discord.Member = 0):
     if not member:
         member = ctx.author
@@ -1134,10 +1180,8 @@ async def guild(ctx, member : discord.Member = 0):
     await ctx.send(embed = embed)
 
 @client.command(aliases = ["ginv"])
+@systemcheck(game=True, proc=True)
 async def ginvite(ctx, member : discord.Member):
-    check = await checkstart(ctx, game = True)
-    if not check:
-        return
     playerins = players[f'{ctx.author.id}']
     try:
         playerins2 = players[f'{member.id}']
@@ -1177,10 +1221,8 @@ async def ginvite(ctx, member : discord.Member):
     await ctx.send(f"You have joined {playerins.guild}!")
 
 @client.command(aliases = ["gdelrole", "gdel"])
+@systemcheck(game=True, proc = True)
 async def gdeleterole(ctx, *, role):
-    check = await checkstart(ctx, game = True)
-    if not check:
-        return
     playerins = players[f'{ctx.author.id}']
     guildins = playerins.guildins
     if guildins == None:
@@ -1209,10 +1251,8 @@ async def gdeleterole(ctx, *, role):
     await ctx.send("Role deleted!")
     
 @client.command()
+@systemcheck(game=True, proc=True)
 async def gmembers(ctx):
-    check = await checkstart(ctx, game = True)
-    if not check:
-        return
     playerins = players[f'{ctx.author.id}']
     if playerins.guild == None:
         await ctx.send("You are not in a guild!")
@@ -1228,10 +1268,8 @@ async def gmembers(ctx):
 
     
 @client.command()
+@systemcheck(game=True, proc=True, fighting=True)
 async def gleave(ctx):
-    check = await checkstart(ctx, game = True)
-    if not check:
-        return
     playerins = players[f'{ctx.author.id}']
     if playerins.guild == None:
         await ctx.send("You are not in a guild!")
@@ -1359,6 +1397,7 @@ async def geditrole(ctx, *, rolename):
     check = await checkstart(ctx, game = True)
     if not check:
         return
+    rolename = rolename.strip().lower()
     playerins = players[f'{ctx.author.id}']
     guildins = playerins.guildins
     if guildins == None:
@@ -1382,7 +1421,13 @@ async def geditrole(ctx, *, rolename):
         await ctx.send("Cannot edit a role higher or equal to your role!")
         return
     def check(message):
-        return message.author == ctx.author
+        return all([
+            message.author == ctx.author,
+            any([
+                message.content.strip().lower() in ['kick', 'invite', 'setrole', 'rolecreation', 'edit'],
+                message.content.split()[0].lower() == 'name'
+            ])
+        ])
     _ = ""
     while True:
         embed = discord.Embed(title = f"{roleins.name} Permissions", description = "Type in the permissions name to switch it's value, case sensitive (type 'cancel' to cancel)")
@@ -1396,16 +1441,15 @@ async def geditrole(ctx, *, rolename):
         try:
             _ = await client.wait_for("message", check=check, timeout=25)
             _ = _.content
+            _ = _.strip().lower()
             splitted = _.split()
             if _.lower() == "cancel":
                 await ctx.send("Cancelled.")
                 return
             elif splitted[0] == "name":
                 newname = ' '.join(splitted[1:])
-                print(newname)
                 del guildins.roles[roleins.name]
                 roleins.name = newname
-                print(roleins.name)
                 guildins.roles[newname] = roleins
                 guildins.rolepos[pos] = newname
             
@@ -1428,53 +1472,9 @@ async def geditrole(ctx, *, rolename):
                    
         
 #game commands
-#@client.command(aliases = ['lb', 'leaderboard'])
-#async def leaderboards(ctx):
-#    check = await checkstart(ctx, game=True)
-#    if not check:
-#        return
-#    embed = discord.Embed(title = "**React with appropriate emojis to see corresponding leaderboards**")
-#    embed.add_field(name = ":coin: for richest players", value = "\u200b", inline=False)
-#    embed.add_field(name = ":globe_with_meridians: for highest level", value = "\u200b", inline=False)
-#    embed.colour = discord.Colour.random()
-#    message = await ctx.send(embed=embed)
-#    await message.add_reaction('coin')
-#    await message.add_reaction('globe_with_meridians')
-#    def check(reaction, user):
-#            print(str(reaction.emoji))
-#            return user == ctx.author and any([
-#                str(reaction.emoji) == 'coin',
-#                str(reaction.emoji) == 'globe_with_meridians'])
-#    try:
-#        reaction, user = await client.wait_for('reaction_add', timeout=60, check=check)
-#    except asyncio.TimeoutError:
-#        await ctx.send("You took too long!")
-#    reaction = str(reaction.emoji)
-#    if reaction == 'coin':
-#        people = sorted(players, key = lambda x : players[x].gold, reverse=True)
-#        people = people[0:10]
-#        embed = discord.Embed(title = "**__Top Richest Players__**")
-#        embed.add_field(name = "**\tPlayername\t\tGold**", value = "\u200b", inline=False)
-#        count = 0
-#        for i in people:
-#            count += 1
-#            playerins = players[i]
-#            embed.add_field(name = f"**{count}. {playerins.user}\t\t{playerins.gold}**", value="\u200b", inline=False)
-#    else:
-#        people = sorted(players, key = lambda x : players[x].level, reverse=True)
-#        people = people[0:10]
-#        embed= discord.Embed(title = "**__Highest Levelled Players__**")
-#        embed.add_field(name = "**\tPlayername\t\tLevel**", value="\u200b", inline=False)
-#        count = 0
-#        for i in people: #i = playerid(string)
-#            count += 1
-#            playerins = players[i]
-#            embed.add_field(name = f"**{count}. {playerins.user}\t\t{playerins.level}**", value="\u200b", inline=False)
-#    embed.colour = discord.Colour.random()
-#    await ctx.send(embed=embed)   
 
-@systemcheck(game=True)
 @client.command()
+@systemcheck(game=True)
 async def itemshow(ctx, slotnum):
     playerins = players[str(ctx.author.id)]
     inventory = playerins.inventory
@@ -1507,34 +1507,38 @@ async def itemshow(ctx, slotnum):
     embed.add_field(name = "**Mag Def**", value = f"{item.magdef}", inline=True)
     await ctx.send(embed=embed)
     
-
-@systemcheck(game=True)
 @client.command()
+@systemcheck()
+async def gvlb(ctx):
+    sortedguilds = sorted(guilds, key = lambda x : guilds[x].value, reverse =True)
+    sortedguilds = sortedguilds[0:10]
+    embed = discord.Embed(title = "**__Top Richest Guilds__**")
+    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+    embed.add_field(name = "**Guild Name**", value = "\n".join([i for i in sortedguilds]))
+    embed.add_field(name = "**Guild Value**", value = "\n".join([await moneyround(guilds[i].value) for i in sortedguilds]))
+    await ctx.send(embed = embed)
+
+@client.command()
+@systemcheck(game=True)
 async def rlb(ctx):
     people = sorted(players, key = lambda x : players[x].gold, reverse=True)
     people = people[0:10]
     embed = discord.Embed(title = "**__Top Richest Players__**")
-    embed.add_field(name = "**\tPlayername\t\tGold**", value = "\u200b", inline=False)
-    count = 0
-    for i in people:
-        count += 1
-        playerins = players[i]
-        embed.add_field(name = f"**{count}. {playerins.user}\t\t{await moneyround(playerins.gold)}**", value="\u200b", inline=False)
+    embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+    embed.add_field(name = "**Player Name**", value = "\n".join([players[i].user for i in people]))
+    embed.add_field(name = "**Player Gold**", value = "\n".join([await moneyround(players[i].gold) for i in people]))
     embed.colour = discord.Colour.random()
     await ctx.send(embed=embed)
 
-@systemcheck(game=True)
 @client.command()
+@systemcheck(game=True)
 async def lb(ctx):
     people = sorted(players, key = lambda x : players[x].level, reverse=True)
     people = people[0:10]
     embed= discord.Embed(title = "**__Highest Levelled Players__**")
-    embed.add_field(name = "**\tPlayername\t\tLevel**", value="\u200b", inline=False)
-    count = 0
-    for i in people: #i = playerid(string)
-        count += 1
-        playerins = players[i]
-        embed.add_field(name = f"**{count}. {playerins.user}\t\t{playerins.level}**", value="\u200b", inline=False)
+    embed.add_field(name = "\u200b", value="\u200b", inline=False)
+    embed.add_field(name = "**Player Name**", value = "\n".join([players[i].user for i in people]))
+    embed.add_field(name = "**Player Level**", value = "\n".join([str(players[i].level) for i in people]))
     embed.colour = discord.Colour.random()
     await ctx.send(embed=embed)
 
@@ -1547,17 +1551,17 @@ async def showpoints(ctx):
     embed = discord.Embed(title = f"**You currently have {playerins.points} points**")
     embed.colour = discord.Colour.random()
     await ctx.send(embed = embed)
- 
-@systemcheck(game=True, fighting=True, proc=True)   
+    
 @client.command(aliases = ['assignpoint'])
+@systemcheck(game=True, fighting=True, proc=True)
 async def assignpoints(ctx):
     playerins = players[str(ctx.author.id)]
     playerins.proc = True
     await givepoints(ctx, playerins, ctx.author)
     playerins.proc=False
     
-@systemcheck(game=True, fighting=True)
 @client.command()
+@systemcheck(game=True, fighting=True)
 async def pay(ctx, member : discord.Member = 0, amount : int = 0):
     playerins = players[str(ctx.author.id)]
     if member == 0:
@@ -1605,8 +1609,8 @@ async def pay(ctx, member : discord.Member = 0, amount : int = 0):
     memberins.gold += amount
     playerins.gold -= amount
 
-@systemcheck(game=True, proc=True)
 @client.command(aliases = ['heal'])
+@systemcheck(game=True, proc=True)
 async def recover(ctx):
     playerins = players[str(ctx.author.id)]
     if playerins.fightstat:
@@ -1670,7 +1674,7 @@ async def equip(ctx, slot):
         del playerins.inventory[item]
     await ctx.send(embed=embed)
             
-@client.command(aliases = ['inventory'])
+@client.command(aliases = ['inventory', 'inv'])
 async def showinv(ctx):
     check = await checkstart(ctx, game = True)
     if not check:
@@ -1682,8 +1686,8 @@ async def showinv(ctx):
         embed.add_field(name = f"Slot {count}", value = f"{item.name}  x{inv[item]}", inline=False)
     await ctx.send(embed=embed)
     
-@systemcheck(game=True, fighting=True)
 @client.command(aliases = ['ac'])
+@systemcheck(game=True, fighting=True)
 async def advcard(ctx):
     playerins = players[str(ctx.author.id)]
     adcard = playerins.advcard
@@ -1697,11 +1701,14 @@ async def advcard(ctx):
     await ctx.send(embed=embed)
 
 @client.command(aliases = ["ag"])
+@systemcheck(game=True, proc = True)
 async def advguild(ctx):
-    check = await checkstart(ctx, game =True)
-    if not check:
-        return
     playerins = players[str(ctx.author.id)]
+    coords = playerins.location[0]
+    coords = coords.split('-')
+    if not map_[int(coords[0])][int(coords[1])] == 't':
+        await ctx.send(f"You are not in a town <@{ctx.author.id}>!")
+    playerins.proc = True
     embed = discord.Embed(title = "**__Guild Master Yuki greets you with a gentle smile and asks what you would like to do today__**")
     embed.add_field(name = "\u200b", value = "\u200b", inline=False)
     embed.add_field(name = "**Options**", value = "\u200b")
@@ -1709,7 +1716,8 @@ async def advguild(ctx):
     embed.add_field(name = "*2) Upgrade your adventurer rank*", value = "\u200b", inline=False)
     embed.add_field(name = "*3) See quests*", value = "\u200b", inline=False)
     embed.add_field(name = "*4) See shop*", value = "\u200b", inline=False)
-    embed.add_field(name = "*5) Nevermind lol*", value = "\u200b", inline=False)
+    embed.add_field(name = "*5) Sell stuff*", value = "\u200b", inline=False)
+    embed.add_field(name = "*6) Nevermind lol*", value = "\u200b", inline=False)
     embed.set_footer(text = "Enter the number of your option")
     await ctx.send(embed=embed)
     def check(message):
@@ -1727,12 +1735,14 @@ async def advguild(ctx):
             embed = discord.Embed(title = "**You already have an adventurer's card!**")
             embed.colour = discord.Colour.red()
             await ctx.send(embed=embed)
+            playerins.proc=False
             return
         ag.register(playerins)
         embed = discord.Embed(title = "**Your adventurer's card has been created and added to your profile!**")
         embed.set_footer(text = "You can use ,advcard to see it")
         embed.colour = discord.Colour.random()
         await ctx.send(embed=embed)
+        playerins.proc=False
         
     elif txt == "2":
         embed = discord.Embed(title = "**This feature isn't opened yet! Stay tuned!**")
@@ -1742,20 +1752,116 @@ async def advguild(ctx):
     elif txt == "3":
         embed = discord.Embed(title = "**This feature isn't opened yet! Stay tuned!**")
         await ctx.send(embed=embed)
+        playerins.proc = False
     
     elif txt == "4":
+        def check(message):
+            return all([
+                message.author == ctx.author,
+                message.content.isdigit(),
+                message.content.lower() == 'cancel'
+            ])
+        def checkemoji(reaction, user):
+            return all([
+                user == ctx.author,
+                reaction.message == sent,
+                str(reaction.emoji) in ["✅", "❌"] 
+            ])
+        def checknormal(message):
+                return all([
+                    message.author == ctx.author,
+                    message.content.lower() in ['yes', 'no']
+                ])
+            
+        try:
+            shop = shops[playerins.location[0]]
+        except:
+            await ctx.send("The shop here isn't opened yet! Come back next time")
+            playerins.proc = False
+            return
+        shopembed = shop.embed()
+        shopdic = shop.shop
+        shopembed.colour = discord.Colour.random()
+        while True:
+            await ctx.send(embed=shopembed)
+            await ctx.send("Enter the number of the item you want or type 'cancel' to cancel")
+            try:
+                message = await client.wait_for('message', check=check, timeout=60)
+            except asyncio.TimeoutError:
+                await ctx.send('You took too long!')
+                playerins.proc = False
+                return
+            if message.content.lower() == 'cancel':
+                embed = discord.Embed(title = f"**{shop.owner} thanks you for visiting**")
+                embed.set_footer(text = "You left the shop.")
+                embed.colour = discord.Colour.random()
+                await ctx.send(embed=embed)
+                playerins.proc = False
+                return
+            message = int(message.content)
+            if message > len(shopdic):
+                await ctx.send("No such item!")
+                continue
+            count = 1
+            for i in shopdic:
+                if count == message:
+                    item = i
+                    break
+                count += 1
+            price = shopdic[item]
+            if price > playerins.gold:
+                await message.reply(content = "You don't have enough money!")
+                continue
+            embed = discord.Embed(title = f"Are you sure you want to buy {item} for {price}?")
+            embed.set_footer(text = "Answer with yes/no in chat.")
+            embed.colour = discord.Colour.random()
+            await ctx.send(embed=embed)
+            try:
+                message = await client.wait_for('message', check=checknormal, timeout=80)
+            except asyncio.TimeoutError:
+                await ctx.send("You took too long!")
+                playerins.proc = False
+                return
+            message = message.content.lower()
+            if not any([message == 'no', message=='yes']):
+                await message.reply(content="That's not a valid reply! (yes/no)")
+                continue
+            elif message == 'no':
+                continue
+            playerins.gold -= price
+            playerins.inventory[item] += 1
+            embed = discord.Embed(title = f"**You have bought {item} for {price}:coin:!**")
+            embed.add_field(name = "\u200b", value = "\u200b", inline=False)
+            embed.add_field(name ="Would you like to buy some more stuff?", value = "\u200b")
+            embed.set_footer(text = "React with the appropriate emojis. The tick for yes and the X for no")
+            sent = await ctx.send(embed=embed)
+            await sent.add_reaction("✅")
+            await sent.add_reaction("❌")
+            try:
+                reaction, user = await client.wait_for('reaction_add', check=checkemoji, timeout=60)
+            except asyncio.TimeoutError:
+                await ctx.send("You took too long!")
+                playerins.proc = False
+                return
+            if reaction.emoji == "❌":
+                embed = discord.Embd(title = f"**{shop.owner} bids you goodbye and good luck on your adventure.**")
+                embed.set_footer(text = "You left the shop.")
+                await ctx.send(embed=embed)
+                break
+            
+        playerins.proc = False
+            
+            
+        
+    elif txt == "5":
         embed = discord.Embed(title = "**Master Brawn's Shop**")
-        embed.add_field(name = "Master Brawn greets you with a warm smile and asks you what you would like.", value = "\u200b")
-        embed.add_field(name = "\u200b", value = "\u200b")
-        embed.add_field(name = "**__Shop Items__**", value = "\u200b")
-        embed.add_field(name = "Sorry there's not anything here as of right now! We'll restock the shop soon!", value="\u200b", inline=False)
-        await ctx.send(embed=embed)
+        embed.add_field(name = "")
     else:
         embed = discord.Embed(title = "**You said goodbye to Master Brawn and he asked u to come again to give him money.**")
         await ctx.send(embed=embed)
-      
-@systemcheck(game=True, fighting=True, proc=True)  
+       
 @client.command(aliases = ["towninfo"])
+@systemcheck(game=True, fighting=True, proc=True) 
 async def tinfo(ctx):
     playerins = players[f'{ctx.author.id}']
     location = playerins.location[0]
@@ -1767,12 +1873,13 @@ async def tinfo(ctx):
     embed.set_footer(text = "Interact with different things with ,tinteract (NPC name/location name)")
     await ctx.send(embed=embed)
 
-@systemcheck(game=True, proc=True, fighting=True)
 @client.command(aliases = ["tint", "interact"])
+@systemcheck(game=True, proc=True, fighting=True)
 async def tinteract(ctx, *, aim):
     playerins = players[f'{ctx.author.id}']
     coords = playerins.location[0]
     playerins.proc = True
+    aim = aim.lower()
     def check(message):
         return message.author == ctx.author
     
@@ -1858,10 +1965,8 @@ async def pdisband(ctx):
 
 
 @client.command(aliases = ["pinv"])
+@systemcheck(game = True, proc=True)
 async def pinvite(ctx, member : discord.Member):
-    check = await checkstart(ctx, game = True)
-    if not check:
-        return
     playerins = players[f'{ctx.author.id}']
     playerins2 = players[f'{member.id}']
     partyins = playerins.party
@@ -1894,8 +1999,8 @@ async def pinvite(ctx, member : discord.Member):
     partyins.members.append(str(member.id))
     await ctx.send("You have accepted the invite!")
 
-@systemcheck(game=True, proc=True, fighting=True)
 @client.command()
+@systemcheck(game=True, proc=True, fighting=True)
 @commands.cooldown(1, 15, commands.BucketType.user)
 async def move(ctx, direction):
     if direction not in ["right", "left", "up", "down"]:
@@ -1990,8 +2095,8 @@ async def stats(ctx):
     embed.add_field(name = "Cooldown Speed", value = f"{playerstats['cooldown_speed']}")
     await ctx.send(embed=embed)
 
-@systemcheck(game=True)
 @client.command(aliases = ["playerinfo", 'profile'])
+@systemcheck(game=True)
 async def player(ctx, member : discord.Member = 0):
     if not member:
         member = ctx.author
@@ -2031,8 +2136,8 @@ async def player(ctx, member : discord.Member = 0):
     embed.set_footer(text = f"Requested by {ctx.author.name}#{ctx.author.discriminator}")
     await ctx.send(embed= embed)
 
-@systemcheck(game=True, fighting=True, proc=True)
 @client.command()
+@systemcheck(game=True, fighting=True, proc=True)
 async def explore(ctx):
     playerins = players[f'{ctx.author.id}']
     location = playerins.location[0]

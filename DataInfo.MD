@@ -48,7 +48,7 @@ key = coords(string), value = information(discord.embed)
 
 ###### mobs
 Dict type. key = mobset id, value = MobSet(dict). 
-MobSet key = mobname(string), MobSet value = mobstats(array) = [minlevel, maxlevel, multiplier, phys_atk, mag_atk, phys_def, mag_def, cooldown]
+MobSet key = mobname(string), MobSet value = mobstats(array) = [minlevel, maxlevel, multiplier, phys_atk, mag_atk, phys_def, mag_def, agility, cooldown]
 
 ###### guilds
 Dict type.
