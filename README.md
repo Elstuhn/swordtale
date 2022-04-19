@@ -1,3 +1,5 @@
+# Project has been abandoned.
+
 # About
 >You are summoned into Anomopheric, a world full of lore, secrets and adventures. Form guilds, parties, friendships and bonds to conquer Anomopheric and be the best amongst all. Explore and find out new information, hidden secrets and un-found mechanisms. As an adventurer, you are thrown into the game with little to no knowledge of it at all, providing immersive exploration, information-gathering and adventuring gameplay to the adventurers. Sub-classes, forging, crafting, exploration, slaying, friendships, large interactive environments and many more.
 
